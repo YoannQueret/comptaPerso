@@ -1,7 +1,7 @@
 {% extends "base.html" %}
 {% block content %}
 <div class="card" style="max-width:520px;">
-  <h1>{{ _("add") }} — {{ _("transfers") }}</h1>
+  <h1>{{ _("edit") if out_tx else _("add") }} — {{ _("transfers") }}</h1>
   <form method="post" id="transfer-form">
   <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
     {% if next_url %}<input type="hidden" name="next" value="{{ next_url }}">{% endif %}
@@ -10,7 +10,7 @@
         <label>{{ _("from_account") }}</label>
         <select name="from_account_id" id="from_account_id" required>
           {% for acc in accounts %}
-          <option value="{{ acc.id }}" data-currency="{{ acc.currency }}">{{ acc.name }} ({{ acc.currency }})</option>
+          <option value="{{ acc.id }}" data-currency="{{ acc.currency }}" {{ 'selected' if out_tx and out_tx.account_id==acc.id else '' }}>{{ acc.name }} ({{ acc.currency }})</option>
           {% endfor %}
         </select>
       </div>
@@ -18,7 +18,7 @@
         <label>{{ _("to_account") }}</label>
         <select name="to_account_id" id="to_account_id" required>
           {% for acc in accounts %}
-          <option value="{{ acc.id }}" data-currency="{{ acc.currency }}">{{ acc.name }} ({{ acc.currency }})</option>
+          <option value="{{ acc.id }}" data-currency="{{ acc.currency }}" {{ 'selected' if in_tx and in_tx.account_id==acc.id else '' }}>{{ acc.name }} ({{ acc.currency }})</option>
           {% endfor %}
         </select>
       </div>
@@ -26,21 +26,26 @@
     <div class="form-row">
       <div class="form-group">
         <label>{{ _("amount_sent") }} (<span id="from-currency-label">—</span>)</label>
-        <input type="text" inputmode="decimal" name="amount_sent" id="amount_sent" required>
+        <input type="text" inputmode="decimal" name="amount_sent" id="amount_sent" value="{{ (out_tx.amount|abs) if out_tx else '' }}" required>
       </div>
       <div class="form-group">
         <label>{{ _("amount_received") }} (<span id="to-currency-label">—</span>)</label>
-        <input type="text" inputmode="decimal" name="amount_received" id="amount_received" required>
+        <input type="text" inputmode="decimal" name="amount_received" id="amount_received" value="{{ (in_tx.amount|abs) if in_tx else '' }}" required>
       </div>
     </div>
     <p class="muted">{{ _("transfer_amount_hint") }}</p>
     <div class="form-group">
       <label>{{ _("date") }}</label>
-      <input type="date" name="date" required>
+      <input type="date" name="date" value="{{ out_tx.date.isoformat() if out_tx else now.isoformat() }}" required>
+    </div>
+    <div class="form-group">
+      <label>{{ _("budget_month") }}</label>
+      <input type="month" name="budget_month" value="{{ out_tx.budget_month.strftime('%Y-%m') if out_tx else now.strftime('%Y-%m') }}">
+      <p class="muted">{{ _("budget_month_hint") }}</p>
     </div>
     <div class="form-group">
       <label>{{ _("description") }}</label>
-      <input type="text" name="description" placeholder="{{ _('transfer') }}">
+      <input type="text" name="description" value="{{ out_tx.description if out_tx else '' }}" placeholder="{{ _('transfer') }}">
     </div>
     <button class="btn" type="submit">{{ _("save") }}</button>
     <a class="btn btn-secondary" href="{{ next_url or url_for('transfers.list_transfers') }}">{{ _("cancel") }}</a>
@@ -48,7 +53,7 @@
 </div>
 
 <script>
-function updateLabels() {
+function updateTransferLabels(copyValue) {
   var fromSel = document.getElementById('from_account_id');
   var toSel = document.getElementById('to_account_id');
   var fromCur = fromSel.options[fromSel.selectedIndex].getAttribute('data-currency');
@@ -56,24 +61,15 @@ function updateLabels() {
   document.getElementById('from-currency-label').textContent = fromCur;
   document.getElementById('to-currency-label').textContent = toCur;
   var amountReceived = document.getElementById('amount_received');
-  if (fromCur === toCur) {
+  var sameCurrency = fromCur === toCur;
+  amountReceived.readOnly = sameCurrency;
+  if (sameCurrency && copyValue) {
     amountReceived.value = document.getElementById('amount_sent').value;
-    amountReceived.readOnly = true;
-  } else {
-    amountReceived.readOnly = false;
   }
 }
-document.getElementById('from_account_id').addEventListener('change', updateLabels);
-document.getElementById('to_account_id').addEventListener('change', updateLabels);
-document.getElementById('amount_sent').addEventListener('input', function() {
-  var fromSel = document.getElementById('from_account_id');
-  var toSel = document.getElementById('to_account_id');
-  var fromCur = fromSel.options[fromSel.selectedIndex].getAttribute('data-currency');
-  var toCur = toSel.options[toSel.selectedIndex].getAttribute('data-currency');
-  if (fromCur === toCur) {
-    document.getElementById('amount_received').value = this.value;
-  }
-});
-updateLabels();
+document.getElementById('from_account_id').addEventListener('change', function() { updateTransferLabels(true); });
+document.getElementById('to_account_id').addEventListener('change', function() { updateTransferLabels(true); });
+document.getElementById('amount_sent').addEventListener('input', function() { updateTransferLabels(true); });
+updateTransferLabels(false);
 </script>
 {% endblock %}

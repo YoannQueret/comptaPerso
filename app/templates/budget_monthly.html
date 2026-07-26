@@ -71,7 +71,7 @@
   <div class="table-wrap">
   <table>
     <thead>
-      <tr><th>{{ _("name") }}</th><th>{{ _("account") }}</th><th>{{ _("date") }}</th><th>{{ _("amount") }}</th><th>{{ _("amount_received") }}</th><th></th></tr>
+      <tr><th>{{ _("name") }}</th><th>{{ _("account") }}</th><th>{{ _("date") }}</th><th>{{ _("budget_month") }}</th><th>{{ _("amount") }}</th><th>{{ _("amount_received") }}</th><th></th></tr>
     </thead>
     <tbody>
       {% for rule in due_rules %}
@@ -79,6 +79,7 @@
         <td>{{ rule.label }}{% if rule.next_due_date < start %} <span class="muted">{{ _("overdue_suffix") }}</span>{% endif %}</td>
         <td>{{ rule.account.name }} ({{ rule.account.currency }}){% if rule.is_transfer %} → {{ rule.to_account.name }}{% endif %}</td>
         <td><input form="form-{{ rule.id }}" type="date" name="date" value="{{ rule.next_due_date.isoformat() }}" style="min-width:140px;"></td>
+        <td><input form="form-{{ rule.id }}" type="month" name="budget_month" value="{{ rule.next_due_date.strftime('%Y-%m') }}" style="min-width:110px;"></td>
         <td><input form="form-{{ rule.id }}" type="text" inputmode="decimal" name="amount" value="{{ rule.amount|abs }}" style="max-width:110px;"></td>
         <td>
           {% if rule.is_transfer %}
@@ -96,7 +97,7 @@
         </td>
       </tr>
       {% else %}
-      <tr><td colspan="6">{{ _("no_data") }}</td></tr>
+      <tr><td colspan="7">{{ _("no_data") }}</td></tr>
       {% endfor %}
     </tbody>
   </table>
@@ -111,7 +112,7 @@
     <tbody>
       {% for t in validated_txs %}
       <tr>
-        <td>{{ t.date.strftime('%d/%m/%Y') }}</td>
+        <td>{{ t.date.strftime('%d/%m/%Y') }}{% if t.budget_month != t.date.replace(day=1) %} <span class="muted" title="{{ _('budget_month') }}">→ {{ month_name(locale, t.budget_month.month) }} {{ t.budget_month.year }}</span>{% endif %}</td>
         <td>{{ t.account.name }}</td>
         <td>
           {% if t.is_transfer %}
@@ -122,7 +123,9 @@
         </td>
         <td class="{{ 'amount-positive' if t.amount >= 0 else 'amount-negative' }}">{{ "%.2f"|format(t.amount) }} {{ t.account.currency }}</td>
         <td>
-          {% if not t.is_transfer %}
+          {% if t.is_transfer %}
+          <a class="btn btn-sm btn-secondary" href="{{ url_for('transfers.edit_transfer', group_id=t.transfer_group_id, next=request.full_path) }}">{{ _("edit") }}</a>
+          {% else %}
           <a class="btn btn-sm btn-secondary" href="{{ url_for('transactions.edit_transaction', tx_id=t.id, next=request.full_path) }}">{{ _("edit") }}</a>
           {% endif %}
           <form class="inline" method="post" action="{{ url_for('recurring.unvalidate_occurrence', tx_id=t.id) }}" onsubmit="return confirm('{{ _("confirm_revert") }}');">
@@ -153,7 +156,7 @@
     <tbody>
       {% for t in other_txs %}
       <tr>
-        <td>{{ t.date.strftime('%d/%m/%Y') }}</td>
+        <td>{{ t.date.strftime('%d/%m/%Y') }}{% if t.budget_month != t.date.replace(day=1) %} <span class="muted" title="{{ _('budget_month') }}">→ {{ month_name(locale, t.budget_month.month) }} {{ t.budget_month.year }}</span>{% endif %}</td>
         <td>{{ t.account.name }}</td>
         <td>
           {% if t.is_transfer %}

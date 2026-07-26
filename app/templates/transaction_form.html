@@ -19,7 +19,14 @@
       </div>
       <div class="form-group">
         <label>{{ _("date") }}</label>
-        <input type="date" name="date" value="{{ transaction.date.isoformat() if transaction else '' }}" required>
+        <input type="date" name="date" value="{{ transaction.date.isoformat() if transaction else now.isoformat() }}" required>
+      </div>
+    </div>
+    <div class="form-row">
+      <div class="form-group">
+        <label>{{ _("budget_month") }}</label>
+        <input type="month" name="budget_month" value="{{ transaction.budget_month.strftime('%Y-%m') if transaction else now.strftime('%Y-%m') }}">
+        <p class="muted">{{ _("budget_month_hint") }}</p>
       </div>
     </div>
     <div class="form-row">

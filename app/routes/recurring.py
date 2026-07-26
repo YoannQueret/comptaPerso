@@ -18,6 +18,12 @@ def _parse_date(s, default=None):
     return datetime.strptime(s, "%Y-%m-%d").date()
 
 
+def _parse_budget_month(s, fallback_date):
+    if s:
+        return datetime.strptime(s, "%Y-%m").date().replace(day=1)
+    return fallback_date.replace(day=1)
+
+
 SORT_COLUMNS = {
     "name": RecurringRule.label,
     "account": Account.name,
@@ -195,13 +201,14 @@ def delete_recurring(rule_id):
 
 
 def _carryover_balance(account_id, start):
-    """Account balance just before `start`: initial balance + all transactions
-    dated before that day."""
+    """Budget balance just before `start`: initial balance + all transactions whose
+    budget_month is before this one (not `date` — a budget-shifted transaction must
+    be counted exactly once, either in the carryover or in the month's own total)."""
     carryover_q = db.session.query(
         db.func.coalesce(db.func.sum(Transaction.amount), 0)
     ).filter(
         Transaction.user_id == current_user.id,
-        Transaction.date < start,
+        Transaction.budget_month < start,
     )
     initial_balance_q = db.session.query(
         db.func.coalesce(db.func.sum(Account.initial_balance), 0)
@@ -212,26 +219,38 @@ def _carryover_balance(account_id, start):
     return float(initial_balance_q.scalar() or 0) + float(carryover_q.scalar() or 0)
 
 
+def _rule_pending_amount(rule, account_id):
+    """Signed amount a due (not-yet-validated) rule contributes for `account_id`:
+    the sent amount for its source account, the received amount when `account_id`
+    is a transfer's destination — so a transfer shows as pending income on the
+    account that's about to receive it, not as an expense."""
+    if rule.is_transfer and account_id and rule.to_account_id == account_id:
+        return float(rule.amount_received if rule.amount_received is not None else abs(rule.amount))
+    return float(rule.amount)
+
+
 @bp.route("/budget/<int:year>/<int:month>")
 @login_required
 def monthly_budget(year, month):
     start, end = month_bounds(year, month)
     account_id = resolve_account_id(current_user, request.args.get("account_id"))
 
-    # occurrences due this month or overdue (not yet validated)
+    # occurrences due this month or overdue (not yet validated) — a transfer rule
+    # is due on both its source and destination account's budget page.
     due_rules_q = RecurringRule.query.filter(
         RecurringRule.user_id == current_user.id,
         RecurringRule.active.is_(True),
         RecurringRule.next_due_date <= end,
     )
     if account_id:
-        due_rules_q = due_rules_q.filter(RecurringRule.account_id == account_id)
+        due_rules_q = due_rules_q.filter(
+            db.or_(RecurringRule.account_id == account_id, RecurringRule.to_account_id == account_id)
+        )
     due_rules = due_rules_q.order_by(RecurringRule.next_due_date).all()
 
     validated_txs_q = Transaction.query.filter(
         Transaction.user_id == current_user.id,
-        Transaction.date >= start,
-        Transaction.date <= end,
+        Transaction.budget_month == start,
         Transaction.recurring_rule_id.isnot(None),
     )
     if account_id:
@@ -240,8 +259,7 @@ def monthly_budget(year, month):
 
     other_txs_q = Transaction.query.filter(
         Transaction.user_id == current_user.id,
-        Transaction.date >= start,
-        Transaction.date <= end,
+        Transaction.budget_month == start,
         Transaction.recurring_rule_id.is_(None),
     )
     if account_id:
@@ -264,8 +282,9 @@ def monthly_budget(year, month):
     total_expenses = sum(-float(t.amount) for t in validated_txs + other_txs if t.amount < 0)
     total_income = sum(float(t.amount) for t in validated_txs + other_txs if t.amount > 0)
 
-    pending_expenses = sum(-float(r.amount) for r in due_rules if r.amount < 0)
-    pending_income = sum(float(r.amount) for r in due_rules if r.amount > 0)
+    pending_amounts = [_rule_pending_amount(r, account_id) for r in due_rules]
+    pending_expenses = sum(-a for a in pending_amounts if a < 0)
+    pending_income = sum(a for a in pending_amounts if a > 0)
 
     remaining_validated = total_income - total_expenses
     remaining_forecast = (total_income + pending_income) - (total_expenses + pending_expenses)
@@ -344,7 +363,9 @@ def monthly_budget_chart_data(year, month):
     )
     if account_id:
         txs_q = txs_q.filter(Transaction.account_id == account_id)
-        due_rules_q = due_rules_q.filter(RecurringRule.account_id == account_id)
+        due_rules_q = due_rules_q.filter(
+            db.or_(RecurringRule.account_id == account_id, RecurringRule.to_account_id == account_id)
+        )
     txs = txs_q.order_by(Transaction.date, Transaction.created_at).all()
     due_rules = due_rules_q.order_by(RecurringRule.next_due_date).all()
 
@@ -353,8 +374,9 @@ def monthly_budget_chart_data(year, month):
         for t in txs
     ]
     for r in due_rules:
+        amount = _rule_pending_amount(r, account_id)
         events += [
-            {"date": d, "amount": float(r.amount), "label": r.label}
+            {"date": d, "amount": amount, "label": r.label}
             for d in _rule_occurrences_in_range(r, start, end)
         ]
     events.sort(key=lambda e: e["date"])
@@ -399,6 +421,7 @@ def monthly_budget_chart_data(year, month):
 def validate_occurrence(rule_id):
     rule = RecurringRule.query.filter_by(id=rule_id, user_id=current_user.id).first_or_404()
     occ_date = _parse_date(request.form["date"], rule.next_due_date)
+    budget_month = _parse_budget_month(request.form.get("budget_month"), occ_date)
 
     if rule.is_transfer:
         amount_sent = abs(Decimal(request.form["amount"].replace(",", ".")))
@@ -409,6 +432,7 @@ def validate_occurrence(rule_id):
             user_id=current_user.id,
             account_id=rule.account_id,
             date=occ_date,
+            budget_month=budget_month,
             amount=-amount_sent,
             description=rule.label,
             is_transfer=True,
@@ -419,6 +443,7 @@ def validate_occurrence(rule_id):
             user_id=current_user.id,
             account_id=rule.to_account_id,
             date=occ_date,
+            budget_month=budget_month,
             amount=amount_received,
             description=rule.label,
             is_transfer=True,
@@ -433,6 +458,7 @@ def validate_occurrence(rule_id):
             account_id=rule.account_id,
             category_id=rule.category_id,
             date=occ_date,
+            budget_month=budget_month,
             amount=amount,
             description=rule.label,
             recurring_rule_id=rule.id,

@@ -56,7 +56,7 @@
     <tbody>
       {% for t in transactions %}
       <tr class="{{ 'future-tx' if t.date > today else '' }}">
-        <td>{{ t.date.strftime('%d/%m/%Y') }}{% if t.date > today %} <span class="badge-future">{{ _("future") }}</span>{% endif %}</td>
+        <td>{{ t.date.strftime('%d/%m/%Y') }}{% if t.date > today %} <span class="badge-future">{{ _("future") }}</span>{% endif %}{% if t.budget_month != t.date.replace(day=1) %} <span class="muted" title="{{ _('budget_month') }}">→ {{ month_name(locale, t.budget_month.month) }} {{ t.budget_month.year }}</span>{% endif %}</td>
         <td>{{ t.account.name }}</td>
         <td>
           {% if t.is_transfer %}
@@ -113,6 +113,13 @@
       <div class="form-group">
         <label>{{ _("date") }}</label>
         <input type="date" name="date" value="{{ today.isoformat() }}" required>
+      </div>
+    </div>
+    <div class="form-row">
+      <div class="form-group">
+        <label>{{ _("budget_month") }}</label>
+        <input type="month" name="budget_month" value="{{ today.strftime('%Y-%m') }}">
+        <p class="muted">{{ _("budget_month_hint") }}</p>
       </div>
     </div>
     <div class="form-row">

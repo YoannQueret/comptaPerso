@@ -22,6 +22,12 @@ def _parse_date(s, default=None):
     return datetime.strptime(s, "%Y-%m-%d").date()
 
 
+def _parse_budget_month(s, fallback_date):
+    if s:
+        return datetime.strptime(s, "%Y-%m").date().replace(day=1)
+    return fallback_date.replace(day=1)
+
+
 def _attachment_extension(file_storage):
     if not file_storage or not file_storage.filename or "." not in file_storage.filename:
         return None
@@ -138,11 +144,13 @@ def new_transaction():
             amount = -abs(amount)
         else:
             amount = abs(amount)
+        tx_date = _parse_date(request.form["date"], date.today())
         tx = Transaction(
             user_id=current_user.id,
             account_id=request.form["account_id"],
             category_id=request.form.get("category_id") or None,
-            date=_parse_date(request.form["date"], date.today()),
+            date=tx_date,
+            budget_month=_parse_budget_month(request.form.get("budget_month"), tx_date),
             amount=amount,
             description=request.form.get("description", "").strip(),
         )
@@ -190,6 +198,7 @@ def edit_transaction(tx_id):
         tx.account_id = request.form["account_id"]
         tx.category_id = request.form.get("category_id") or None
         tx.date = _parse_date(request.form["date"], tx.date)
+        tx.budget_month = _parse_budget_month(request.form.get("budget_month"), tx.date)
         tx.amount = amount
         tx.description = request.form.get("description", "").strip()
 

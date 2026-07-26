@@ -173,11 +173,6 @@ amount received is copied automatically (editable if needed).
   account/currency; no aggregated multi-currency conversion for now).
 - No charts yet (reports are table-based).
 
-## What's in todo list
-
-- Virement recurrents
-- 
-
 ## Project structure
 
 ```

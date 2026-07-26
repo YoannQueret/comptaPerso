@@ -114,6 +114,9 @@ class Transaction(db.Model):
     account_id = db.Column(db.String(36), db.ForeignKey("accounts.id"), nullable=False, index=True)
     category_id = db.Column(db.String(36), db.ForeignKey("categories.id"), nullable=True)
     date = db.Column(db.Date, nullable=False, default=date.today, index=True)
+    # which month's budget this counts toward (always the 1st of a month); independent
+    # from `date`, which stays the real bank-movement date used for account balances.
+    budget_month = db.Column(db.Date, nullable=False, index=True)
     # signed amount: positive = income, negative = expense (in the account's currency)
     amount = db.Column(db.Numeric(14, 2), nullable=False)
     description = db.Column(db.String(255))

@@ -52,5 +52,9 @@
 
   {% block content %}{% endblock %}
 </main>
+<script>
+window.MONTH_NAMES = [{% for i in range(1, 13) %}{{ month_name(locale, i)|tojson }}{% if not loop.last %},{% endif %}{% endfor %}];
+</script>
+<script src="{{ url_for('static', filename='month-picker.js') }}"></script>
 </body>
 </html>

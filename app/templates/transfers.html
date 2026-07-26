@@ -21,6 +21,7 @@
         <td class="amount-positive">{{ "%.2f"|format(in_tx.amount) if in_tx else '—' }} {{ in_tx.account.currency if in_tx else '' }}</td>
         <td>{{ out_tx.description }}</td>
         <td>
+          <a class="btn btn-sm btn-secondary" href="{{ url_for('transfers.edit_transfer', group_id=out_tx.transfer_group_id, next=request.full_path) }}">{{ _("edit") }}</a>
           <form class="inline" method="post" action="{{ url_for('transfers.delete_transfer', group_id=out_tx.transfer_group_id) }}" onsubmit="return confirm('{{ _("confirm_delete_transfer") }}');">
   <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
             <button class="btn btn-sm btn-danger" type="submit">{{ _("delete") }}</button>
@@ -74,6 +75,11 @@
       <input type="date" name="date" value="{{ today.isoformat() }}" required>
     </div>
     <div class="form-group">
+      <label>{{ _("budget_month") }}</label>
+      <input type="month" name="budget_month" value="{{ today.strftime('%Y-%m') }}">
+      <p class="muted">{{ _("budget_month_hint") }}</p>
+    </div>
+    <div class="form-group">
       <label>{{ _("description") }}</label>
       <input type="text" name="description" placeholder="{{ _('transfer') }}">
     </div>
@@ -85,7 +91,7 @@
 </dialog>
 
 <script>
-function updateTransferLabels() {
+function updateTransferLabels(copyValue) {
   var fromSel = document.getElementById('from_account_id');
   var toSel = document.getElementById('to_account_id');
   var fromCur = fromSel.options[fromSel.selectedIndex].getAttribute('data-currency');
@@ -93,24 +99,15 @@ function updateTransferLabels() {
   document.getElementById('from-currency-label').textContent = fromCur;
   document.getElementById('to-currency-label').textContent = toCur;
   var amountReceived = document.getElementById('amount_received');
-  if (fromCur === toCur) {
+  var sameCurrency = fromCur === toCur;
+  amountReceived.readOnly = sameCurrency;
+  if (sameCurrency && copyValue) {
     amountReceived.value = document.getElementById('amount_sent').value;
-    amountReceived.readOnly = true;
-  } else {
-    amountReceived.readOnly = false;
   }
 }
-document.getElementById('from_account_id').addEventListener('change', updateTransferLabels);
-document.getElementById('to_account_id').addEventListener('change', updateTransferLabels);
-document.getElementById('amount_sent').addEventListener('input', function() {
-  var fromSel = document.getElementById('from_account_id');
-  var toSel = document.getElementById('to_account_id');
-  var fromCur = fromSel.options[fromSel.selectedIndex].getAttribute('data-currency');
-  var toCur = toSel.options[toSel.selectedIndex].getAttribute('data-currency');
-  if (fromCur === toCur) {
-    document.getElementById('amount_received').value = this.value;
-  }
-});
-updateTransferLabels();
+document.getElementById('from_account_id').addEventListener('change', function() { updateTransferLabels(true); });
+document.getElementById('to_account_id').addEventListener('change', function() { updateTransferLabels(true); });
+document.getElementById('amount_sent').addEventListener('input', function() { updateTransferLabels(true); });
+updateTransferLabels(false);
 </script>
 {% endblock %}

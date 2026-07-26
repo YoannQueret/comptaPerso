@@ -18,6 +18,12 @@ def _parse_date(s, default=None):
     return datetime.strptime(s, "%Y-%m-%d").date()
 
 
+def _parse_budget_month(s, fallback_date):
+    if s:
+        return datetime.strptime(s, "%Y-%m").date().replace(day=1)
+    return fallback_date.replace(day=1)
+
+
 @bp.route("/")
 @login_required
 def list_transfers():
@@ -66,6 +72,7 @@ def new_transfer():
         amount_sent = abs(Decimal(request.form["amount_sent"].replace(",", ".")))
         amount_received = abs(Decimal(request.form["amount_received"].replace(",", ".")))
         d = _parse_date(request.form["date"], date.today())
+        budget_month = _parse_budget_month(request.form.get("budget_month"), d)
         description = request.form.get("description", "").strip() or g._("transfer")
 
         group_id = str(uuid.uuid4())
@@ -74,6 +81,7 @@ def new_transfer():
             user_id=current_user.id,
             account_id=from_account.id,
             date=d,
+            budget_month=budget_month,
             amount=-amount_sent,
             description=description,
             is_transfer=True,
@@ -83,6 +91,7 @@ def new_transfer():
             user_id=current_user.id,
             account_id=to_account.id,
             date=d,
+            budget_month=budget_month,
             amount=amount_received,
             description=description,
             is_transfer=True,
@@ -94,7 +103,68 @@ def new_transfer():
         return redirect(next_url or url_for("transfers.list_transfers"))
 
     return render_template(
-        "transfer_form.html", accounts=accounts, next_url=safe_next(request.args.get("next"))
+        "transfer_form.html",
+        accounts=accounts,
+        out_tx=None,
+        in_tx=None,
+        next_url=safe_next(request.args.get("next")),
+    )
+
+
+@bp.route("/<group_id>/edit", methods=["GET", "POST"])
+@login_required
+def edit_transfer(group_id):
+    out_tx = Transaction.query.filter_by(
+        transfer_group_id=group_id, user_id=current_user.id, is_transfer=True
+    ).filter(Transaction.amount < 0).first_or_404()
+    in_tx = Transaction.query.filter_by(
+        transfer_group_id=group_id, user_id=current_user.id, is_transfer=True
+    ).filter(Transaction.id != out_tx.id).first_or_404()
+
+    accounts = Account.query.filter_by(user_id=current_user.id).order_by(Account.name).all()
+
+    if request.method == "POST":
+        from_account = Account.query.filter_by(
+            id=request.form["from_account_id"], user_id=current_user.id
+        ).first_or_404()
+        to_account = Account.query.filter_by(
+            id=request.form["to_account_id"], user_id=current_user.id
+        ).first_or_404()
+
+        next_url = safe_next(request.form.get("next"))
+
+        if from_account.id == to_account.id:
+            flash(g._("transfer_accounts_must_differ"), "danger")
+            return redirect(next_url or url_for("transfers.edit_transfer", group_id=group_id))
+
+        amount_sent = abs(Decimal(request.form["amount_sent"].replace(",", ".")))
+        amount_received = abs(Decimal(request.form["amount_received"].replace(",", ".")))
+        d = _parse_date(request.form["date"], out_tx.date)
+        budget_month = _parse_budget_month(request.form.get("budget_month"), d)
+        description = request.form.get("description", "").strip() or g._("transfer")
+
+        out_tx.account_id = from_account.id
+        out_tx.date = d
+        out_tx.budget_month = budget_month
+        out_tx.amount = -amount_sent
+        out_tx.description = description
+
+        in_tx.account_id = to_account.id
+        in_tx.date = d
+        in_tx.budget_month = budget_month
+        in_tx.amount = amount_received
+        in_tx.description = description
+
+        db.session.commit()
+        flash(g._("transfer_updated"), "success")
+        return redirect(next_url or url_for("transfers.list_transfers"))
+
+    return render_template(
+        "transfer_form.html",
+        accounts=accounts,
+        out_tx=out_tx,
+        in_tx=in_tx,
+        next_url=safe_next(request.args.get("next")),
     )
 
 
