@@ -1,0 +1,15 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="card" style="max-width:420px;">
+  <h1>{{ _("edit") if account_type else _("add") }} — {{ _("account_types") }}</h1>
+  <form method="post">
+  <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+    <div class="form-group">
+      <label>{{ _("name") }}</label>
+      <input type="text" name="name" value="{{ account_type.name if account_type else '' }}" required autofocus>
+    </div>
+    <button class="btn" type="submit">{{ _("save") }}</button>
+    <a class="btn btn-secondary" href="{{ url_for('account_types.list_account_types') }}">{{ _("cancel") }}</a>
+  </form>
+</div>
+{% endblock %}

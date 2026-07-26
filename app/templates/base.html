@@ -1,0 +1,56 @@
+<!doctype html>
+<html lang="{{ locale }}">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>comptaPerso</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+{% if current_user.is_authenticated %}
+<nav class="navbar">
+  <a class="navbar-brand" href="{{ url_for('main.dashboard') }}">comptaPerso</a>
+  <input type="checkbox" id="nav-toggle" class="nav-toggle-checkbox">
+  <label for="nav-toggle" class="nav-toggle-label" aria-label="Menu">☰</label>
+  <div class="navbar-links">
+    <a href="{{ url_for('transactions.list_transactions') }}">{{ _("transactions") }}</a>
+    <a href="{{ url_for('transfers.list_transfers') }}">{{ _("transfers") }}</a>
+    <a href="{{ url_for('recurring.monthly_budget', year=now.year, month=now.month) }}">{{ _("monthly_budget") }}</a>
+    <a href="{{ url_for('reports.index') }}">{{ _("reports") }}</a>
+    <details class="navbar-dropdown">
+      <summary>{{ _("settings") }}</summary>
+      <div class="navbar-dropdown-menu">
+        <a href="{{ url_for('accounts.list_accounts') }}">{{ _("accounts") }}</a>
+        <a href="{{ url_for('account_types.list_account_types') }}">{{ _("account_types") }}</a>
+        <a href="{{ url_for('categories.list_categories') }}">{{ _("categories") }}</a>
+        <a href="{{ url_for('recurring.list_recurring') }}">{{ _("recurring") }}</a>
+      </div>
+    </details>
+  </div>
+  <div class="navbar-right">
+    <a href="{{ url_for('auth.set_locale', lang='fr') }}" class="{{ 'active-lang' if locale=='fr' else '' }}">FR</a>
+    <a href="{{ url_for('auth.set_locale', lang='en') }}" class="{{ 'active-lang' if locale=='en' else '' }}">EN</a>
+    <details class="navbar-dropdown navbar-dropdown-right">
+      <summary>{{ current_user.name }}</summary>
+      <div class="navbar-dropdown-menu">
+        <a href="{{ url_for('auth.change_password') }}">{{ _("change_password") }}</a>
+        <a href="{{ url_for('auth.logout') }}">{{ _("logout") }}</a>
+      </div>
+    </details>
+  </div>
+</nav>
+{% endif %}
+
+<main class="container">
+  {% with messages = get_flashed_messages(with_categories=true) %}
+    {% if messages %}
+      {% for category, message in messages %}
+        <div class="alert alert-{{ category }}">{{ message }}</div>
+      {% endfor %}
+    {% endif %}
+  {% endwith %}
+
+  {% block content %}{% endblock %}
+</main>
+</body>
+</html>

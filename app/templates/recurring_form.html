@@ -1,0 +1,124 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="card" style="max-width:520px;">
+  <h1>{{ _("edit") if rule else _("add") }} — {{ _("recurring") }}</h1>
+  <form method="post">
+  <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+    {% if next_url %}<input type="hidden" name="next" value="{{ next_url }}">{% endif %}
+    <div class="form-group">
+      <label>{{ _("name") }}</label>
+      <input type="text" name="label" value="{{ rule.label if rule else '' }}" required autofocus>
+    </div>
+    <div class="form-row">
+      <div class="form-group">
+        <label>{{ _("type") }}</label>
+        <select name="kind" id="rf-kind" onchange="toggleRecurringKind('rf')">
+          <option value="expense" {{ 'selected' if rule and not rule.is_transfer and rule.amount < 0 else '' }}>{{ _("expense") }}</option>
+          <option value="income" {{ 'selected' if rule and not rule.is_transfer and rule.amount >= 0 else '' }}>{{ _("income") }}</option>
+          <option value="transfer" {{ 'selected' if rule and rule.is_transfer else '' }}>{{ _("transfer") }}</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label>{{ _("approximate_amount") }}</label>
+        <input type="text" inputmode="decimal" name="amount" id="rf-amount" value="{{ (rule.amount|abs) if rule else '' }}" required>
+      </div>
+    </div>
+    <div class="form-row">
+      <div class="form-group">
+        <label>{{ _("account") }}</label>
+        <select name="account_id" id="rf-from" required>
+          {% for acc in accounts %}
+          <option value="{{ acc.id }}" data-currency="{{ acc.currency }}" {{ 'selected' if (rule and rule.account_id==acc.id) or (not rule and preselected_account_id and preselected_account_id==acc.id) else '' }}>{{ acc.name }} ({{ acc.currency }})</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div class="form-group recurring-category-group" id="rf-category-group">
+        <label>{{ _("category") }}</label>
+        <select name="category_id">
+          <option value="">—</option>
+          {% for cat in categories %}
+          <option value="{{ cat.id }}" {{ 'selected' if rule and rule.category_id==cat.id else '' }}>{{ cat.full_name }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div class="form-group recurring-transfer-group" id="rf-to-group" style="display:none;">
+        <label>{{ _("to_account") }}</label>
+        <select name="to_account_id" id="rf-to">
+          {% for acc in accounts %}
+          <option value="{{ acc.id }}" data-currency="{{ acc.currency }}" {{ 'selected' if rule and rule.to_account_id==acc.id else '' }}>{{ acc.name }} ({{ acc.currency }})</option>
+          {% endfor %}
+        </select>
+      </div>
+    </div>
+    <div class="form-group recurring-transfer-group" id="rf-received-group" style="display:none;">
+      <label>{{ _("amount_received") }}</label>
+      <input type="text" inputmode="decimal" name="amount_received" id="rf-received" value="{{ rule.amount_received if rule and rule.amount_received else '' }}">
+    </div>
+    <div class="form-row">
+      <div class="form-group">
+        <label>{{ _("periodicity") }}</label>
+        <select name="periodicity">
+          {% for p in periodicities %}
+          <option value="{{ p }}" {{ 'selected' if (rule and rule.periodicity==p) or (not rule and p=='month') else '' }}>{{ p|periodicity_label }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div class="form-group">
+        <label>{{ _("interval_label") }}</label>
+        <input type="number" name="interval" min="1" value="{{ rule.interval if rule else 1 }}">
+      </div>
+    </div>
+    {% if not rule %}
+    <div class="form-group">
+      <label>{{ _("start_date_hint") }}</label>
+      <input type="date" name="start_date" required>
+    </div>
+    {% endif %}
+    <div class="form-group">
+      <label>{{ _("end_date_optional") }}</label>
+      <input type="date" name="end_date" value="{{ rule.end_date.isoformat() if rule and rule.end_date else '' }}">
+    </div>
+    {% if rule %}
+    <div class="form-group">
+      <label>{{ _("next_due_date_label") }}</label>
+      <input type="date" name="next_due_date" value="{{ rule.next_due_date.isoformat() }}" required>
+    </div>
+    <div class="form-group">
+      <label><input type="checkbox" name="active" {{ 'checked' if rule.active else '' }} style="width:auto;display:inline-block;"> {{ _("active") }}</label>
+    </div>
+    {% endif %}
+    <button class="btn" type="submit">{{ _("save") }}</button>
+    <a class="btn btn-secondary" href="{{ url_for('recurring.list_recurring') }}">{{ _("cancel") }}</a>
+  </form>
+</div>
+
+<script>
+function toggleRecurringKind(prefix) {
+  var kind = document.getElementById(prefix + '-kind').value;
+  var isTransfer = kind === 'transfer';
+  document.getElementById(prefix + '-category-group').style.display = isTransfer ? 'none' : '';
+  document.getElementById(prefix + '-to-group').style.display = isTransfer ? '' : 'none';
+  document.getElementById(prefix + '-received-group').style.display = isTransfer ? '' : 'none';
+}
+
+function syncRecurringReceived(prefix) {
+  var fromSel = document.getElementById(prefix + '-from');
+  var toSel = document.getElementById(prefix + '-to');
+  var received = document.getElementById(prefix + '-received');
+  if (!fromSel.options.length || !toSel.options.length) return;
+  var fromCur = fromSel.options[fromSel.selectedIndex].getAttribute('data-currency');
+  var toCur = toSel.options[toSel.selectedIndex].getAttribute('data-currency');
+  if (fromCur === toCur) {
+    received.value = document.getElementById(prefix + '-amount').value;
+    received.readOnly = true;
+  } else {
+    received.readOnly = false;
+  }
+}
+
+toggleRecurringKind('rf');
+document.getElementById('rf-from').addEventListener('change', function() { syncRecurringReceived('rf'); });
+document.getElementById('rf-to').addEventListener('change', function() { syncRecurringReceived('rf'); });
+document.getElementById('rf-amount').addEventListener('input', function() { syncRecurringReceived('rf'); });
+</script>
+{% endblock %}

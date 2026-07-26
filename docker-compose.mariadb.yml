@@ -1,0 +1,48 @@
+# MariaDB variant instead of SQLite.
+# Usage: docker compose -f docker-compose.mariadb.yml up -d --build
+services:
+  comptaperso:
+    build: .
+    container_name: comptaperso
+    restart: unless-stopped
+    ports:
+      - "${PORT:-5000}:${PORT:-5000}"
+    environment:
+      - SECRET_KEY=change-me-in-production
+      - DB_ENGINE=mariadb
+      - DB_HOST=db
+      - DB_PORT=3306
+      - DB_USER=compta
+      - DB_PASSWORD=compta_password_to_change
+      - DB_NAME=comptaperso
+      - ALLOW_REGISTRATION=true
+      - PORT=${PORT:-5000}
+      # Flask debugger/auto-reload — leave disabled in production.
+      # - FLASK_DEBUG=false
+      # Outgoing email (password reset) — uncomment and fill in to enable sending.
+      # Leave SMTP_HOST unset to disable sending (reset requests still succeed,
+      # the email is just logged instead of delivered).
+      # - SMTP_HOST=smtp.example.com
+      # - SMTP_PORT=587
+      # - SMTP_USERNAME=you@example.com
+      # - SMTP_PASSWORD=your-smtp-password
+      # - SMTP_USE_TLS=true
+      # - SMTP_USE_SSL=false
+      # - MAIL_FROM=no-reply@example.com
+    depends_on:
+      - db
+
+  db:
+    image: mariadb:11
+    container_name: comptaperso_db
+    restart: unless-stopped
+    environment:
+      - MARIADB_ROOT_PASSWORD=root_password_to_change
+      - MARIADB_DATABASE=comptaperso
+      - MARIADB_USER=compta
+      - MARIADB_PASSWORD=compta_password_to_change
+    volumes:
+      - comptaperso_db_data:/var/lib/mysql
+
+volumes:
+  comptaperso_db_data:

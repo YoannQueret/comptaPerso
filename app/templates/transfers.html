@@ -1,0 +1,116 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="toolbar">
+  <h1>{{ _("transfers") }}</h1>
+  <button type="button" class="btn" onclick="document.getElementById('add-transfer-dialog').showModal()">+ {{ _("add") }}</button>
+</div>
+
+<div class="card">
+  <div class="table-wrap">
+  <table>
+    <thead>
+      <tr><th>{{ _("date") }}</th><th>{{ _("from_account") }}</th><th>{{ _("to_account") }}</th><th>{{ _("amount_sent") }}</th><th>{{ _("amount_received") }}</th><th>{{ _("description") }}</th><th></th></tr>
+    </thead>
+    <tbody>
+      {% for out_tx, in_tx in pairs %}
+      <tr>
+        <td>{{ out_tx.date.strftime('%d/%m/%Y') }}</td>
+        <td>{{ out_tx.account.name }}</td>
+        <td>{{ in_tx.account.name if in_tx else '—' }}</td>
+        <td class="amount-negative">{{ "%.2f"|format(out_tx.amount|abs) }} {{ out_tx.account.currency }}</td>
+        <td class="amount-positive">{{ "%.2f"|format(in_tx.amount) if in_tx else '—' }} {{ in_tx.account.currency if in_tx else '' }}</td>
+        <td>{{ out_tx.description }}</td>
+        <td>
+          <form class="inline" method="post" action="{{ url_for('transfers.delete_transfer', group_id=out_tx.transfer_group_id) }}" onsubmit="return confirm('{{ _("confirm_delete_transfer") }}');">
+  <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            <button class="btn btn-sm btn-danger" type="submit">{{ _("delete") }}</button>
+          </form>
+        </td>
+      </tr>
+      {% else %}
+      <tr><td colspan="7">{{ _("no_data") }}</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+  </div>
+</div>
+
+<dialog id="add-transfer-dialog" class="modal" style="max-width:520px;">
+  <form method="post" action="{{ url_for('transfers.new_transfer') }}" id="transfer-form">
+  <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+    <input type="hidden" name="next" value="{{ request.full_path }}">
+    <h2 style="margin-top:0;">{{ _("add") }} — {{ _("transfers") }}</h2>
+    <div class="form-row">
+      <div class="form-group">
+        <label>{{ _("from_account") }}</label>
+        <select name="from_account_id" id="from_account_id" required>
+          {% for acc in accounts %}
+          <option value="{{ acc.id }}" data-currency="{{ acc.currency }}">{{ acc.name }} ({{ acc.currency }})</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div class="form-group">
+        <label>{{ _("to_account") }}</label>
+        <select name="to_account_id" id="to_account_id" required>
+          {% for acc in accounts %}
+          <option value="{{ acc.id }}" data-currency="{{ acc.currency }}">{{ acc.name }} ({{ acc.currency }})</option>
+          {% endfor %}
+        </select>
+      </div>
+    </div>
+    <div class="form-row">
+      <div class="form-group">
+        <label>{{ _("amount_sent") }} (<span id="from-currency-label">—</span>)</label>
+        <input type="text" inputmode="decimal" name="amount_sent" id="amount_sent" required>
+      </div>
+      <div class="form-group">
+        <label>{{ _("amount_received") }} (<span id="to-currency-label">—</span>)</label>
+        <input type="text" inputmode="decimal" name="amount_received" id="amount_received" required>
+      </div>
+    </div>
+    <p class="muted">{{ _("transfer_amount_hint") }}</p>
+    <div class="form-group">
+      <label>{{ _("date") }}</label>
+      <input type="date" name="date" value="{{ today.isoformat() }}" required>
+    </div>
+    <div class="form-group">
+      <label>{{ _("description") }}</label>
+      <input type="text" name="description" placeholder="{{ _('transfer') }}">
+    </div>
+    <div class="toolbar" style="margin-bottom:0;">
+      <button type="button" class="btn btn-secondary" onclick="document.getElementById('add-transfer-dialog').close()">{{ _("cancel") }}</button>
+      <button class="btn" type="submit">{{ _("save") }}</button>
+    </div>
+  </form>
+</dialog>
+
+<script>
+function updateTransferLabels() {
+  var fromSel = document.getElementById('from_account_id');
+  var toSel = document.getElementById('to_account_id');
+  var fromCur = fromSel.options[fromSel.selectedIndex].getAttribute('data-currency');
+  var toCur = toSel.options[toSel.selectedIndex].getAttribute('data-currency');
+  document.getElementById('from-currency-label').textContent = fromCur;
+  document.getElementById('to-currency-label').textContent = toCur;
+  var amountReceived = document.getElementById('amount_received');
+  if (fromCur === toCur) {
+    amountReceived.value = document.getElementById('amount_sent').value;
+    amountReceived.readOnly = true;
+  } else {
+    amountReceived.readOnly = false;
+  }
+}
+document.getElementById('from_account_id').addEventListener('change', updateTransferLabels);
+document.getElementById('to_account_id').addEventListener('change', updateTransferLabels);
+document.getElementById('amount_sent').addEventListener('input', function() {
+  var fromSel = document.getElementById('from_account_id');
+  var toSel = document.getElementById('to_account_id');
+  var fromCur = fromSel.options[fromSel.selectedIndex].getAttribute('data-currency');
+  var toCur = toSel.options[toSel.selectedIndex].getAttribute('data-currency');
+  if (fromCur === toCur) {
+    document.getElementById('amount_received').value = this.value;
+  }
+});
+updateTransferLabels();
+</script>
+{% endblock %}

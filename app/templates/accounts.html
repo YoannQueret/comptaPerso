@@ -1,0 +1,49 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="toolbar">
+  <h1>{{ _("accounts") }}</h1>
+  <a class="btn" href="{{ url_for('accounts.new_account') }}">+ {{ _("add") }}</a>
+</div>
+
+<div class="card">
+  <div class="table-wrap">
+  <table>
+    <thead>
+      <tr>
+        <th>{{ _("name") }}</th><th>{{ _("account_number") }}</th><th>{{ _("account_type") }}</th><th>{{ _("currency") }}</th><th>{{ _("balance") }}</th><th>{{ _("default_account") }}</th><th></th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for acc in accounts %}
+      <tr>
+        <td><a href="{{ url_for('transactions.list_transactions', account_id=acc.id) }}">{{ acc.name }}</a>{% if not acc.active %} <span class="muted">{{ _("inactive_suffix") }}</span>{% endif %}</td>
+        <td>{{ acc.account_number or '—' }}</td>
+        <td>{{ acc.account_type.name if acc.account_type else '—' }}</td>
+        <td>{{ acc.currency }}</td>
+        <td class="{{ 'amount-positive' if acc.balance >= 0 else 'amount-negative' }}">{{ "%.2f"|format(acc.balance) }}</td>
+        <td>
+          {% if current_user.default_account_id == acc.id %}
+          <span class="badge-kind badge-kind-income">{{ _("default_account") }}</span>
+          {% else %}
+          <form class="inline" method="post" action="{{ url_for('accounts.set_default_account', account_id=acc.id) }}">
+  <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            <button class="btn btn-sm btn-secondary" type="submit">{{ _("set_default_account") }}</button>
+          </form>
+          {% endif %}
+        </td>
+        <td>
+          <a class="btn btn-sm btn-secondary" href="{{ url_for('accounts.edit_account', account_id=acc.id) }}">{{ _("edit") }}</a>
+          <form class="inline" method="post" action="{{ url_for('accounts.delete_account', account_id=acc.id) }}" onsubmit="return confirm('{{ _("confirm_delete_account") }}');">
+  <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            <button class="btn btn-sm btn-danger" type="submit">{{ _("delete") }}</button>
+          </form>
+        </td>
+      </tr>
+      {% else %}
+      <tr><td colspan="7">{{ _("no_data") }}</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+  </div>
+</div>
+{% endblock %}

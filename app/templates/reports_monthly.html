@@ -1,0 +1,44 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="toolbar">
+  <h1>{{ _("monthly_view") }} — {{ year }}</h1>
+  <div>
+    <a class="btn btn-sm btn-secondary" href="{{ url_for('reports.yearly_monthly', year=year-1, account_id=selected_account_id) }}">&larr; {{ year-1 }}</a>
+    <a class="btn btn-sm btn-secondary" href="{{ url_for('reports.yearly_monthly', year=year+1, account_id=selected_account_id) }}">{{ year+1 }} &rarr;</a>
+  </div>
+</div>
+
+<div class="card">
+  <form method="get" class="form-row">
+    <div class="form-group">
+      <label>{{ _("account") }}</label>
+      <select name="account_id" onchange="this.form.submit()">
+        {% for acc in accounts %}
+        <option value="{{ acc.id }}" {{ 'selected' if selected_account_id==acc.id else '' }}>{{ acc.name }} ({{ acc.currency }})</option>
+        {% endfor %}
+      </select>
+    </div>
+  </form>
+</div>
+
+<div class="card">
+  <div class="table-wrap">
+  <table>
+    <thead>
+      <tr><th>{{ _("month_label") }}</th><th>{{ _("total_expenses") }} ({{ currency }})</th><th>{{ _("total_income") }} ({{ currency }})</th><th>{{ _("net") }} ({{ currency }})</th><th>{{ _("balance") }} ({{ currency }})</th></tr>
+    </thead>
+    <tbody>
+      {% for row in rows %}
+      <tr>
+        <td>{{ month_name(locale, row.month) }}</td>
+        <td class="amount-negative">{{ "%.2f"|format(row.expenses) }}</td>
+        <td class="amount-positive">{{ "%.2f"|format(row.income) }}</td>
+        <td class="{{ 'amount-positive' if row.net >= 0 else 'amount-negative' }}">{{ "%.2f"|format(row.net) }}</td>
+        <td class="{{ 'amount-positive' if row.ending_balance >= 0 else 'amount-negative' }}">{{ "%.2f"|format(row.ending_balance) }}</td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+  </div>
+</div>
+{% endblock %}

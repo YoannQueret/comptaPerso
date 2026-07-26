@@ -1,0 +1,11 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="card" style="max-width:480px;margin:3rem auto;text-align:center;">
+  <div class="stat-value" style="font-size:2.5rem;">404</div>
+  <h1>{{ _("page_not_found_title") }}</h1>
+  <p class="muted">{{ _("page_not_found_message") }}</p>
+  <a class="btn" href="{{ url_for('main.dashboard') if current_user.is_authenticated else url_for('auth.login') }}">
+    {{ _("back_to_dashboard") if current_user.is_authenticated else _("login") }}
+  </a>
+</div>
+{% endblock %}

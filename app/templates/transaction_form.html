@@ -1,0 +1,63 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="card" style="max-width:500px;">
+  <h1>{{ _("edit") if transaction else _("add") }} — {{ _("transactions") }}</h1>
+  <form method="post" enctype="multipart/form-data">
+  <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+    {% if next_url %}<input type="hidden" name="next" value="{{ next_url }}">{% endif %}
+    <div class="form-group">
+      <label>{{ _("type") }}</label>
+      <select name="kind">
+        <option value="expense" {{ 'selected' if transaction and transaction.amount < 0 else '' }}>{{ _("expense") }}</option>
+        <option value="income" {{ 'selected' if transaction and transaction.amount >= 0 else '' }}>{{ _("income") }}</option>
+      </select>
+    </div>
+    <div class="form-row">
+      <div class="form-group">
+        <label>{{ _("amount") }}</label>
+        <input type="text" inputmode="decimal" name="amount" value="{{ (transaction.amount|abs) if transaction else '' }}" required>
+      </div>
+      <div class="form-group">
+        <label>{{ _("date") }}</label>
+        <input type="date" name="date" value="{{ transaction.date.isoformat() if transaction else '' }}" required>
+      </div>
+    </div>
+    <div class="form-row">
+      <div class="form-group">
+        <label>{{ _("account") }}</label>
+        <select name="account_id" required>
+          {% for acc in accounts %}
+          <option value="{{ acc.id }}" {{ 'selected' if (transaction and transaction.account_id==acc.id) or (not transaction and preselected_account_id and preselected_account_id==acc.id) else '' }}>{{ acc.name }} ({{ acc.currency }})</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div class="form-group">
+        <label>{{ _("category") }}</label>
+        <select name="category_id">
+          <option value="">—</option>
+          {% for cat in categories %}
+          <option value="{{ cat.id }}" {{ 'selected' if transaction and transaction.category_id==cat.id else '' }}>{{ cat.full_name }}</option>
+          {% endfor %}
+        </select>
+      </div>
+    </div>
+    <div class="form-group">
+      <label>{{ _("description") }}</label>
+      <input type="text" name="description" value="{{ transaction.description if transaction else '' }}">
+    </div>
+    <div class="form-group">
+      <label>{{ _("attachment") }}</label>
+      <input type="file" name="attachment" accept="image/*,application/pdf" capture="environment">
+      {% if transaction and transaction.attachment_filename %}
+      <p class="muted">
+        <a href="{{ url_for('transactions.view_attachment', tx_id=transaction.id) }}" target="_blank">{{ _("view_attachment") }}</a>
+        &middot;
+        <label><input type="checkbox" name="remove_attachment" style="width:auto;display:inline-block;"> {{ _("remove_attachment") }}</label>
+      </p>
+      {% endif %}
+    </div>
+    <button class="btn" type="submit">{{ _("save") }}</button>
+    <a class="btn btn-secondary" href="{{ next_url or url_for('transactions.list_transactions') }}">{{ _("cancel") }}</a>
+  </form>
+</div>
+{% endblock %}

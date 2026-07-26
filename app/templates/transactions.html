@@ -1,0 +1,151 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="toolbar">
+  <h1>{{ _("transactions") }}</h1>
+  <button type="button" class="btn" onclick="document.getElementById('add-tx-dialog').showModal()">+ {{ _("add") }}</button>
+</div>
+
+<div class="card">
+  <form method="get" class="form-row">
+    <div class="form-group">
+      <label>{{ _("account") }}</label>
+      <select name="account_id" onchange="this.form.submit()">
+        {% for acc in accounts %}
+        <option value="{{ acc.id }}" {{ 'selected' if selected_account_id==acc.id else '' }}>{{ acc.name }} ({{ acc.currency }})</option>
+        {% endfor %}
+      </select>
+    </div>
+    <div class="form-group">
+      <label>{{ _("category") }}</label>
+      <select name="category_id" onchange="this.form.submit()">
+        <option value="">—</option>
+        {% for cat in categories %}
+        <option value="{{ cat.id }}" {{ 'selected' if filters.get('category_id')==cat.id else '' }}>{{ cat.full_name }}</option>
+        {% endfor %}
+      </select>
+    </div>
+    <div class="form-group">
+      <label>{{ _("date_from") }}</label>
+      <input type="date" name="date_from" value="{{ filters.get('date_from','') }}">
+    </div>
+    <div class="form-group">
+      <label>{{ _("date_to") }}</label>
+      <input type="date" name="date_to" value="{{ filters.get('date_to','') }}">
+    </div>
+    <div class="form-group" style="align-self:flex-end;">
+      <button class="btn" type="submit">{{ _("filter_label") }}</button>
+    </div>
+  </form>
+</div>
+
+<div class="card">
+  <div class="table-wrap">
+  <table>
+    <thead>
+      <tr>
+        <th>
+          {% set qs = request.args.to_dict() %}
+          {% set discard = qs.update({'sort': 'date_asc' if sort == 'date_desc' else 'date_desc'}) %}
+          <a href="{{ url_for('transactions.list_transactions', **qs) }}">
+            {{ _("date") }} {{ '↓' if sort == 'date_desc' else '↑' }}
+          </a>
+        </th>
+        <th>{{ _("account") }}</th><th>{{ _("category") }}</th><th>{{ _("description") }}</th><th>{{ _("amount") }}</th><th></th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for t in transactions %}
+      <tr class="{{ 'future-tx' if t.date > today else '' }}">
+        <td>{{ t.date.strftime('%d/%m/%Y') }}{% if t.date > today %} <span class="badge-future">{{ _("future") }}</span>{% endif %}</td>
+        <td>{{ t.account.name }}</td>
+        <td>
+          {% if t.is_transfer %}
+          <span class="muted">
+            {% set cp = transfer_counterparts.get(t.id) %}
+            {{ _("transfer") }}{% if cp %} {{ '→' if t.amount < 0 else '←' }} {{ cp.account.name }}{% endif %}
+          </span>
+          {% else %}
+          {{ t.category.full_name if t.category else '—' }}
+          {% endif %}
+        </td>
+        <td>{{ t.description or '—' }}{% if t.attachment_filename %} <a href="{{ url_for('transactions.view_attachment', tx_id=t.id) }}" target="_blank" title="{{ _('view_attachment') }}">📎</a>{% endif %}</td>
+        <td class="{{ 'amount-positive' if t.amount >= 0 else 'amount-negative' }}">{{ "%.2f"|format(t.amount) }} {{ t.account.currency }}</td>
+        <td>
+          {% if t.is_transfer %}
+          <form class="inline" method="post" action="{{ url_for('transfers.delete_transfer', group_id=t.transfer_group_id) }}" onsubmit="return confirm('{{ _("confirm_delete_transfer") }}');">
+  <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            <button class="btn btn-sm btn-danger" type="submit">{{ _("delete") }}</button>
+          </form>
+          {% else %}
+          <a class="btn btn-sm btn-secondary" href="{{ url_for('transactions.edit_transaction', tx_id=t.id) }}">{{ _("edit") }}</a>
+          <form class="inline" method="post" action="{{ url_for('transactions.delete_transaction', tx_id=t.id) }}" onsubmit="return confirm('{{ _("confirm_delete_transaction") }}');">
+  <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            <button class="btn btn-sm btn-danger" type="submit">{{ _("delete") }}</button>
+          </form>
+          {% endif %}
+        </td>
+      </tr>
+      {% else %}
+      <tr><td colspan="6">{{ _("no_data") }}</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+  </div>
+</div>
+
+<dialog id="add-tx-dialog" class="modal">
+  <form method="post" action="{{ url_for('transactions.new_transaction') }}" enctype="multipart/form-data">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+    <input type="hidden" name="next" value="{{ request.full_path }}">
+    <h2 style="margin-top:0;">{{ _("add") }} — {{ _("transactions") }}</h2>
+    <div class="form-group">
+      <label>{{ _("type") }}</label>
+      <select name="kind">
+        <option value="expense">{{ _("expense") }}</option>
+        <option value="income">{{ _("income") }}</option>
+      </select>
+    </div>
+    <div class="form-row">
+      <div class="form-group">
+        <label>{{ _("amount") }}</label>
+        <input type="text" inputmode="decimal" name="amount" required>
+      </div>
+      <div class="form-group">
+        <label>{{ _("date") }}</label>
+        <input type="date" name="date" value="{{ today.isoformat() }}" required>
+      </div>
+    </div>
+    <div class="form-row">
+      <div class="form-group">
+        <label>{{ _("account") }}</label>
+        <select name="account_id" required>
+          {% for acc in active_accounts %}
+          <option value="{{ acc.id }}" {{ 'selected' if selected_account_id==acc.id else '' }}>{{ acc.name }} ({{ acc.currency }})</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div class="form-group">
+        <label>{{ _("category") }}</label>
+        <select name="category_id">
+          <option value="">—</option>
+          {% for cat in categories %}
+          <option value="{{ cat.id }}" {{ 'selected' if filters.get('category_id')==cat.id else '' }}>{{ cat.full_name }}</option>
+          {% endfor %}
+        </select>
+      </div>
+    </div>
+    <div class="form-group">
+      <label>{{ _("description") }}</label>
+      <input type="text" name="description">
+    </div>
+    <div class="form-group">
+      <label>{{ _("attachment") }}</label>
+      <input type="file" name="attachment" accept="image/*,application/pdf" capture="environment">
+    </div>
+    <div class="toolbar" style="margin-bottom:0;">
+      <button type="button" class="btn btn-secondary" onclick="document.getElementById('add-tx-dialog').close()">{{ _("cancel") }}</button>
+      <button class="btn" type="submit">{{ _("save") }}</button>
+    </div>
+  </form>
+</dialog>
+{% endblock %}

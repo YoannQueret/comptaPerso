@@ -1,0 +1,175 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="toolbar">
+  <h1>{{ _("recurring") }}</h1>
+  <button type="button" class="btn" onclick="document.getElementById('add-recurring-dialog').showModal()">+ {{ _("add") }}</button>
+</div>
+
+<div class="card">
+  <div class="table-wrap">
+  <table>
+    <thead>
+      <tr>
+        {% for key, label in [('name', _("name")), ('account', _("account")), ('category', _("category")), ('amount', _("amount"))] %}
+        <th>
+          <a href="{{ url_for('recurring.list_recurring', sort=key, dir='desc' if sort==key and direction=='asc' else 'asc') }}">
+            {{ label }}{% if sort==key %} {{ '↑' if direction=='asc' else '↓' }}{% endif %}
+          </a>
+        </th>
+        {% endfor %}
+        <th>{{ _("periodicity") }}</th>
+        <th>
+          <a href="{{ url_for('recurring.list_recurring', sort='due_date', dir='desc' if sort=='due_date' and direction=='asc' else 'asc') }}">
+            {{ _("next_due_date_label") }}{% if sort=='due_date' %} {{ '↑' if direction=='asc' else '↓' }}{% endif %}
+          </a>
+        </th>
+        <th></th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for r in rules %}
+      <tr>
+        <td>{{ r.label }}{% if not r.active %} <span class="muted">{{ _("inactive_suffix") }}</span>{% endif %}</td>
+        <td>{{ r.account.name }}{% if r.is_transfer %} → {{ r.to_account.name }}{% endif %}</td>
+        <td>
+          {% if r.is_transfer %}
+          <span class="muted">{{ _("transfer") }}</span>
+          {% else %}
+          {{ r.category.full_name if r.category else '—' }}
+          {% endif %}
+        </td>
+        <td class="{{ 'amount-positive' if r.amount >= 0 else 'amount-negative' }}">{{ "%.2f"|format(r.amount) }} {{ r.account.currency }}</td>
+        <td>{{ r.periodicity|periodicity_label }} (x{{ r.interval }})</td>
+        <td>{{ r.next_due_date.strftime('%d/%m/%Y') }}</td>
+        <td>
+          <a class="btn btn-sm btn-secondary" href="{{ url_for('recurring.edit_recurring', rule_id=r.id) }}">{{ _("edit") }}</a>
+          <form class="inline" method="post" action="{{ url_for('recurring.delete_recurring', rule_id=r.id) }}" onsubmit="return confirm('{{ _("confirm_delete_recurring") }}');">
+  <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            <button class="btn btn-sm btn-danger" type="submit">{{ _("delete") }}</button>
+          </form>
+        </td>
+      </tr>
+      {% else %}
+      <tr><td colspan="7">{{ _("no_data") }}</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+  </div>
+</div>
+
+<dialog id="add-recurring-dialog" class="modal" style="max-width:560px;">
+  <form method="post" action="{{ url_for('recurring.new_recurring') }}" id="add-recurring-form">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+    <input type="hidden" name="next" value="{{ request.full_path }}">
+    <h2 style="margin-top:0;">{{ _("add") }} — {{ _("recurring") }}</h2>
+    <div class="form-group">
+      <label>{{ _("name") }}</label>
+      <input type="text" name="label" required autofocus>
+    </div>
+    <div class="form-row">
+      <div class="form-group">
+        <label>{{ _("type") }}</label>
+        <select name="kind" id="add-recurring-kind" onchange="toggleRecurringKind('add-recurring')">
+          <option value="expense">{{ _("expense") }}</option>
+          <option value="income">{{ _("income") }}</option>
+          <option value="transfer">{{ _("transfer") }}</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label>{{ _("approximate_amount") }}</label>
+        <input type="text" inputmode="decimal" name="amount" id="add-recurring-amount" required>
+      </div>
+    </div>
+    <div class="form-row">
+      <div class="form-group">
+        <label>{{ _("account") }}</label>
+        <select name="account_id" id="add-recurring-from" required>
+          {% for acc in active_accounts %}
+          <option value="{{ acc.id }}" data-currency="{{ acc.currency }}" {{ 'selected' if preselected_account_id==acc.id else '' }}>{{ acc.name }} ({{ acc.currency }})</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div class="form-group recurring-category-group" id="add-recurring-category-group">
+        <label>{{ _("category") }}</label>
+        <select name="category_id">
+          <option value="">—</option>
+          {% for cat in categories %}
+          <option value="{{ cat.id }}">{{ cat.full_name }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div class="form-group recurring-transfer-group" id="add-recurring-to-group" style="display:none;">
+        <label>{{ _("to_account") }}</label>
+        <select name="to_account_id" id="add-recurring-to">
+          {% for acc in active_accounts %}
+          <option value="{{ acc.id }}" data-currency="{{ acc.currency }}">{{ acc.name }} ({{ acc.currency }})</option>
+          {% endfor %}
+        </select>
+      </div>
+    </div>
+    <div class="form-group recurring-transfer-group" id="add-recurring-received-group" style="display:none;">
+      <label>{{ _("amount_received") }}</label>
+      <input type="text" inputmode="decimal" name="amount_received" id="add-recurring-received">
+    </div>
+    <div class="form-row">
+      <div class="form-group">
+        <label>{{ _("periodicity") }}</label>
+        <select name="periodicity">
+          {% for p in periodicities %}
+          <option value="{{ p }}" {{ 'selected' if p=='month' else '' }}>{{ p|periodicity_label }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div class="form-group">
+        <label>{{ _("interval_label") }}</label>
+        <input type="number" name="interval" min="1" value="1">
+      </div>
+    </div>
+    <div class="form-row">
+      <div class="form-group">
+        <label>{{ _("start_date_hint") }}</label>
+        <input type="date" name="start_date" value="{{ today.isoformat() }}" required>
+      </div>
+      <div class="form-group">
+        <label>{{ _("end_date_optional") }}</label>
+        <input type="date" name="end_date">
+      </div>
+    </div>
+    <div class="toolbar" style="margin-bottom:0;">
+      <button type="button" class="btn btn-secondary" onclick="document.getElementById('add-recurring-dialog').close()">{{ _("cancel") }}</button>
+      <button class="btn" type="submit">{{ _("save") }}</button>
+    </div>
+  </form>
+</dialog>
+
+<script>
+function toggleRecurringKind(prefix) {
+  var kind = document.getElementById(prefix + '-kind').value;
+  var isTransfer = kind === 'transfer';
+  document.getElementById(prefix + '-category-group').style.display = isTransfer ? 'none' : '';
+  document.getElementById(prefix + '-to-group').style.display = isTransfer ? '' : 'none';
+  document.getElementById(prefix + '-received-group').style.display = isTransfer ? '' : 'none';
+}
+
+function syncRecurringReceived(prefix) {
+  var fromSel = document.getElementById(prefix + '-from');
+  var toSel = document.getElementById(prefix + '-to');
+  var received = document.getElementById(prefix + '-received');
+  if (!fromSel.options.length || !toSel.options.length) return;
+  var fromCur = fromSel.options[fromSel.selectedIndex].getAttribute('data-currency');
+  var toCur = toSel.options[toSel.selectedIndex].getAttribute('data-currency');
+  if (fromCur === toCur) {
+    received.value = document.getElementById(prefix + '-amount').value;
+    received.readOnly = true;
+  } else {
+    received.readOnly = false;
+  }
+}
+
+['add-recurring'].forEach(function(prefix) {
+  document.getElementById(prefix + '-from').addEventListener('change', function() { syncRecurringReceived(prefix); });
+  document.getElementById(prefix + '-to').addEventListener('change', function() { syncRecurringReceived(prefix); });
+  document.getElementById(prefix + '-amount').addEventListener('input', function() { syncRecurringReceived(prefix); });
+});
+</script>
+{% endblock %}

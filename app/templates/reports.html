@@ -1,0 +1,82 @@
+{% extends "base.html" %}
+{% block content %}
+<h1>{{ _("reports") }}</h1>
+
+<div class="card">
+  <div class="toolbar">
+    <a class="btn btn-secondary" href="{{ url_for('reports.yearly_monthly', year=now.year, account_id=selected_account_id) }}">{{ _("monthly_view") }} ({{ now.year }})</a>
+    <a class="btn btn-secondary" href="{{ url_for('reports.yearly', account_id=selected_account_id) }}">{{ _("yearly_view") }}</a>
+  </div>
+</div>
+
+<div class="card">
+  <form method="get" class="form-row">
+    <div class="form-group">
+      <label>{{ _("account") }}</label>
+      <select name="account_id" onchange="this.form.submit()">
+        {% for acc in accounts %}
+        <option value="{{ acc.id }}" {{ 'selected' if selected_account_id==acc.id else '' }}>{{ acc.name }} ({{ acc.currency }})</option>
+        {% endfor %}
+      </select>
+    </div>
+    <input type="hidden" name="a_from" value="{{ a_from.isoformat() }}">
+    <input type="hidden" name="a_to" value="{{ a_to.isoformat() }}">
+    <input type="hidden" name="b_from" value="{{ b_from.isoformat() if b_from else '' }}">
+    <input type="hidden" name="b_to" value="{{ b_to.isoformat() if b_to else '' }}">
+  </form>
+</div>
+
+<div class="card">
+  <h2>{{ _("compare") }} — {{ _("period") }} A vs {{ _("period") }} B</h2>
+  <form method="get" class="form-row">
+    <input type="hidden" name="account_id" value="{{ selected_account_id }}">
+    <div class="form-group">
+      <label>{{ _("period") }} A — {{ _("period_from") }}</label>
+      <input type="date" name="a_from" value="{{ a_from.isoformat() }}">
+    </div>
+    <div class="form-group">
+      <label>{{ _("period") }} A — {{ _("period_to") }}</label>
+      <input type="date" name="a_to" value="{{ a_to.isoformat() }}">
+    </div>
+    <div class="form-group">
+      <label>{{ _("period") }} B — {{ _("period_from") }} {{ _("optional_suffix") }}</label>
+      <input type="date" name="b_from" value="{{ b_from.isoformat() if b_from else '' }}">
+    </div>
+    <div class="form-group">
+      <label>{{ _("period") }} B — {{ _("period_to") }} {{ _("optional_suffix") }}</label>
+      <input type="date" name="b_to" value="{{ b_to.isoformat() if b_to else '' }}">
+    </div>
+    <div class="form-group" style="align-self:flex-end;">
+      <button class="btn" type="submit">{{ _("compare") }}</button>
+    </div>
+  </form>
+</div>
+
+<div class="card">
+  <div class="table-wrap">
+  <table>
+    <thead>
+      <tr>
+        <th>{{ _("category") }}</th>
+        <th>{{ _("period") }} A ({{ currency }})</th>
+        {% if has_b %}<th>{{ _("period") }} B ({{ currency }})</th><th>{{ _("difference") }} ({{ currency }})</th>{% endif %}
+      </tr>
+    </thead>
+    <tbody>
+      {% for cat, va, vb, diff in comparison_rows %}
+      <tr>
+        <td>{{ cat }}</td>
+        <td class="{{ 'amount-positive' if va >= 0 else 'amount-negative' }}">{{ "%.2f"|format(va) }}</td>
+        {% if has_b %}
+        <td class="{{ 'amount-positive' if vb >= 0 else 'amount-negative' }}">{{ "%.2f"|format(vb) }}</td>
+        <td class="{{ 'amount-positive' if diff >= 0 else 'amount-negative' }}">{{ "%.2f"|format(diff) }}</td>
+        {% endif %}
+      </tr>
+      {% else %}
+      <tr><td colspan="4">{{ _("no_data") }}</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+  </div>
+</div>
+{% endblock %}

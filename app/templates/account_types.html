@@ -1,0 +1,33 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="toolbar">
+  <h1>{{ _("account_types") }}</h1>
+  <a class="btn" href="{{ url_for('account_types.new_account_type') }}">+ {{ _("add") }}</a>
+</div>
+
+<div class="card">
+  <div class="table-wrap">
+  <table>
+    <thead>
+      <tr><th>{{ _("name") }}</th><th></th></tr>
+    </thead>
+    <tbody>
+      {% for at in account_types %}
+      <tr>
+        <td>{{ at.name }}</td>
+        <td>
+          <a class="btn btn-sm btn-secondary" href="{{ url_for('account_types.edit_account_type', account_type_id=at.id) }}">{{ _("edit") }}</a>
+          <form class="inline" method="post" action="{{ url_for('account_types.delete_account_type', account_type_id=at.id) }}" onsubmit="return confirm('{{ _("confirm_delete_account_type") }}');">
+  <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            <button class="btn btn-sm btn-danger" type="submit">{{ _("delete") }}</button>
+          </form>
+        </td>
+      </tr>
+      {% else %}
+      <tr><td colspan="2">{{ _("no_data") }}</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+  </div>
+</div>
+{% endblock %}

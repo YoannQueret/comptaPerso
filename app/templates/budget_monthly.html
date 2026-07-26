@@ -1,0 +1,405 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="month-nav">
+  <a href="{{ url_for('recurring.monthly_budget', year=prev_year, month=prev_month, account_id=selected_account_id) }}">&larr;</a>
+  <h1 style="margin:0;">{{ _("monthly_budget") }} — {{ month_name(locale, start.month) }} {{ start.year }}</h1>
+  <a href="{{ url_for('recurring.monthly_budget', year=next_year, month=next_month, account_id=selected_account_id) }}">&rarr;</a>
+  {% if year > now.year or (year == now.year and month >= now.month) %}
+  <button type="button" class="btn btn-sm" style="margin-left:auto;" onclick="openBalanceChart()">📈 {{ _("balance_chart") }}</button>
+  {% endif %}
+</div>
+
+<div class="card">
+  <form method="get" class="form-row">
+    <div class="form-group">
+      <label>{{ _("account") }}</label>
+      <select name="account_id" onchange="this.form.submit()">
+        {% for acc in accounts %}
+        <option value="{{ acc.id }}" {{ 'selected' if selected_account_id==acc.id else '' }}>{{ acc.name }}</option>
+        {% endfor %}
+      </select>
+    </div>
+    <noscript><div class="form-group" style="align-self:flex-end;"><button class="btn" type="submit">{{ _("filter_label") }}</button></div></noscript>
+  </form>
+</div>
+
+<div class="card-grid">
+  <div class="card">
+    <div class="muted">{{ _("total_expenses") }}</div>
+    <div class="stat-value amount-negative">{{ "%.2f"|format(total_expenses) }}</div>
+  </div>
+  <div class="card">
+    <div class="muted">{{ _("total_income") }}</div>
+    <div class="stat-value amount-positive">{{ "%.2f"|format(total_income) }}</div>
+  </div>
+  <div class="card">
+    <div class="muted">{{ _("net") }}</div>
+    <div class="stat-value {{ 'amount-positive' if (total_income-total_expenses) >= 0 else 'amount-negative' }}">{{ "%.2f"|format(total_income - total_expenses) }}</div>
+  </div>
+  <div class="card">
+    <div class="muted">{{ _("net_with_carryover") }}</div>
+    <div class="stat-value {{ 'amount-positive' if net_with_carryover >= 0 else 'amount-negative' }}">{{ "%.2f"|format(net_with_carryover) }}</div>
+    <p class="muted">{{ _("net_with_carryover_hint") }}</p>
+  </div>
+</div>
+
+<div class="card-grid">
+  <div class="card">
+    <div class="muted">{{ _("remaining_validated") }}</div>
+    <div class="stat-value {{ 'amount-positive' if remaining_validated >= 0 else 'amount-negative' }}">{{ "%.2f"|format(remaining_validated) }}</div>
+    <p class="muted">{{ _("remaining_validated_hint") }}</p>
+  </div>
+  <div class="card">
+    <div class="muted">{{ _("remaining_forecast") }}</div>
+    <div class="stat-value {{ 'amount-positive' if remaining_forecast >= 0 else 'amount-negative' }}">{{ "%.2f"|format(remaining_forecast) }}</div>
+    <p class="muted">{{ _("remaining_forecast_hint") }}</p>
+  </div>
+</div>
+
+<div class="card">
+  <h2>{{ _("recurring_to_validate") }}</h2>
+  <p class="muted">{{ _("adjust_before_validating") }}. {{ _("overdue_hint") }}</p>
+  {% for rule in due_rules %}
+  <form method="post" action="{{ url_for('recurring.validate_occurrence', rule_id=rule.id) }}" id="form-{{ rule.id }}">
+  <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"></form>
+  <form method="post" action="{{ url_for('recurring.ignore_occurrence', rule_id=rule.id) }}" id="ignore-form-{{ rule.id }}">
+  <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+  <input type="hidden" name="year" value="{{ year }}">
+  <input type="hidden" name="month" value="{{ month }}">
+  <input type="hidden" name="account_id" value="{{ selected_account_id or '' }}"></form>
+  {% endfor %}
+  <div class="table-wrap">
+  <table>
+    <thead>
+      <tr><th>{{ _("name") }}</th><th>{{ _("account") }}</th><th>{{ _("date") }}</th><th>{{ _("amount") }}</th><th>{{ _("amount_received") }}</th><th></th></tr>
+    </thead>
+    <tbody>
+      {% for rule in due_rules %}
+      <tr class="due-row">
+        <td>{{ rule.label }}{% if rule.next_due_date < start %} <span class="muted">{{ _("overdue_suffix") }}</span>{% endif %}</td>
+        <td>{{ rule.account.name }} ({{ rule.account.currency }}){% if rule.is_transfer %} → {{ rule.to_account.name }}{% endif %}</td>
+        <td><input form="form-{{ rule.id }}" type="date" name="date" value="{{ rule.next_due_date.isoformat() }}" style="min-width:140px;"></td>
+        <td><input form="form-{{ rule.id }}" type="text" inputmode="decimal" name="amount" value="{{ rule.amount|abs }}" style="max-width:110px;"></td>
+        <td>
+          {% if rule.is_transfer %}
+          <input form="form-{{ rule.id }}" type="text" inputmode="decimal" name="amount_received" value="{{ rule.amount_received|abs if rule.amount_received else rule.amount|abs }}" style="max-width:110px;">
+          {% else %}
+          —
+          {% endif %}
+        </td>
+        <td>
+          <input form="form-{{ rule.id }}" type="hidden" name="year" value="{{ year }}">
+          <input form="form-{{ rule.id }}" type="hidden" name="month" value="{{ month }}">
+          <input form="form-{{ rule.id }}" type="hidden" name="account_id" value="{{ selected_account_id or '' }}">
+          <button form="form-{{ rule.id }}" class="btn btn-sm" type="submit">{{ _("validate") }}</button>
+          <button form="ignore-form-{{ rule.id }}" class="btn btn-sm btn-secondary" type="submit" onclick="return confirm('{{ _("confirm_ignore") }}');">{{ _("ignore") }}</button>
+        </td>
+      </tr>
+      {% else %}
+      <tr><td colspan="6">{{ _("no_data") }}</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+  </div>
+</div>
+
+<div class="card">
+  <h2>{{ _("validated_this_month") }}</h2>
+  <div class="table-wrap">
+  <table>
+    <thead><tr><th>{{ _("date") }}</th><th>{{ _("account") }}</th><th>{{ _("description") }}</th><th>{{ _("amount") }}</th><th></th></tr></thead>
+    <tbody>
+      {% for t in validated_txs %}
+      <tr>
+        <td>{{ t.date.strftime('%d/%m/%Y') }}</td>
+        <td>{{ t.account.name }}</td>
+        <td>
+          {% if t.is_transfer %}
+          <span class="muted">{{ _("transfer") }} {{ '→' if t.amount < 0 else '←' }} {{ t.recurring_rule.to_account.name if t.amount < 0 else t.recurring_rule.account.name }}</span>
+          {% else %}
+          {{ t.description }}
+          {% endif %}
+        </td>
+        <td class="{{ 'amount-positive' if t.amount >= 0 else 'amount-negative' }}">{{ "%.2f"|format(t.amount) }} {{ t.account.currency }}</td>
+        <td>
+          {% if not t.is_transfer %}
+          <a class="btn btn-sm btn-secondary" href="{{ url_for('transactions.edit_transaction', tx_id=t.id, next=request.full_path) }}">{{ _("edit") }}</a>
+          {% endif %}
+          <form class="inline" method="post" action="{{ url_for('recurring.unvalidate_occurrence', tx_id=t.id) }}" onsubmit="return confirm('{{ _("confirm_revert") }}');">
+  <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+  <input type="hidden" name="year" value="{{ year }}">
+  <input type="hidden" name="month" value="{{ month }}">
+  <input type="hidden" name="account_id" value="{{ selected_account_id or '' }}">
+            <button class="btn btn-sm btn-danger" type="submit">{{ _("revert_to_pending") }}</button>
+          </form>
+        </td>
+      </tr>
+      {% else %}
+      <tr><td colspan="5">{{ _("no_data") }}</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+  </div>
+</div>
+
+<div class="card">
+  <div class="toolbar">
+    <h2 style="margin:0;">{{ _("other_transactions_this_month") }}</h2>
+    <button type="button" class="btn btn-sm" onclick="document.getElementById('add-tx-dialog').showModal()">+ {{ _("add") }}</button>
+  </div>
+  <div class="table-wrap">
+  <table>
+    <thead><tr><th>{{ _("date") }}</th><th>{{ _("account") }}</th><th>{{ _("category") }}</th><th>{{ _("description") }}</th><th>{{ _("amount") }}</th></tr></thead>
+    <tbody>
+      {% for t in other_txs %}
+      <tr>
+        <td>{{ t.date.strftime('%d/%m/%Y') }}</td>
+        <td>{{ t.account.name }}</td>
+        <td>
+          {% if t.is_transfer %}
+          {% set cp = transfer_counterparts.get(t.id) %}
+          <span class="muted">{{ _("transfer") }}{% if cp %} {{ '→' if t.amount < 0 else '←' }} {{ cp.account.name }}{% endif %}</span>
+          {% else %}
+          {{ t.category.full_name if t.category else '—' }}
+          {% endif %}
+        </td>
+        <td>{{ t.description or '—' }}{% if t.attachment_filename %} <a href="{{ url_for('transactions.view_attachment', tx_id=t.id) }}" target="_blank" title="{{ _('view_attachment') }}">📎</a>{% endif %}</td>
+        <td class="{{ 'amount-positive' if t.amount >= 0 else 'amount-negative' }}">{{ "%.2f"|format(t.amount) }} {{ t.account.currency }}</td>
+      </tr>
+      {% else %}
+      <tr><td colspan="5">{{ _("no_data") }}</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+  </div>
+</div>
+
+<dialog id="add-tx-dialog" class="modal">
+  <form method="post" action="{{ url_for('transactions.new_transaction') }}" enctype="multipart/form-data">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+    <input type="hidden" name="next" value="{{ request.full_path }}">
+    <h2 style="margin-top:0;">{{ _("add") }} — {{ _("transactions") }}</h2>
+    <div class="form-group">
+      <label>{{ _("type") }}</label>
+      <select name="kind">
+        <option value="expense">{{ _("expense") }}</option>
+        <option value="income">{{ _("income") }}</option>
+      </select>
+    </div>
+    <div class="form-row">
+      <div class="form-group">
+        <label>{{ _("amount") }}</label>
+        <input type="text" inputmode="decimal" name="amount" required>
+      </div>
+      <div class="form-group">
+        <label>{{ _("date") }}</label>
+        <input type="date" name="date" value="{{ (today if start <= today <= end else start).isoformat() }}" required>
+      </div>
+    </div>
+    <div class="form-row">
+      <div class="form-group">
+        <label>{{ _("account") }}</label>
+        <select name="account_id" required>
+          {% for acc in active_accounts %}
+          <option value="{{ acc.id }}" {{ 'selected' if selected_account_id==acc.id else '' }}>{{ acc.name }} ({{ acc.currency }})</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div class="form-group">
+        <label>{{ _("category") }}</label>
+        <select name="category_id">
+          <option value="">—</option>
+          {% for cat in categories %}
+          <option value="{{ cat.id }}">{{ cat.full_name }}</option>
+          {% endfor %}
+        </select>
+      </div>
+    </div>
+    <div class="form-group">
+      <label>{{ _("description") }}</label>
+      <input type="text" name="description">
+    </div>
+    <div class="form-group">
+      <label>{{ _("attachment") }}</label>
+      <input type="file" name="attachment" accept="image/*,application/pdf" capture="environment">
+    </div>
+    <div class="toolbar" style="margin-bottom:0;">
+      <button type="button" class="btn btn-secondary" onclick="document.getElementById('add-tx-dialog').close()">{{ _("cancel") }}</button>
+      <button class="btn" type="submit">{{ _("save") }}</button>
+    </div>
+  </form>
+</dialog>
+
+{% if year > now.year or (year == now.year and month >= now.month) %}
+<dialog id="balance-chart-dialog" class="modal" style="max-width:700px;">
+  <h2 style="margin-top:0;">{{ _("balance_chart") }}</h2>
+  <div class="chart-legend">
+    <span><span class="chart-key"></span> {{ _("realized") }}</span>
+    <span><span class="chart-key chart-key-dashed"></span> {{ _("projected") }}</span>
+  </div>
+  <div id="balance-chart-container" class="balance-chart-container">
+    <p class="muted">{{ _("loading") }}</p>
+  </div>
+  <div class="toolbar" style="margin-bottom:0;margin-top:1rem;">
+    <button type="button" class="btn btn-secondary" onclick="document.getElementById('balance-chart-dialog').close()">{{ _("cancel") }}</button>
+  </div>
+</dialog>
+
+<script>
+let balanceChartLoaded = false;
+
+function openBalanceChart() {
+  var dialog = document.getElementById('balance-chart-dialog');
+  dialog.showModal();
+  if (balanceChartLoaded) return;
+  fetch("{{ url_for('recurring.monthly_budget_chart_data', year=year, month=month, account_id=selected_account_id) }}")
+    .then(function(r) { return r.json(); })
+    .then(function(data) {
+      renderBalanceChart(document.getElementById('balance-chart-container'), data);
+      balanceChartLoaded = true;
+    });
+}
+
+function renderBalanceChart(container, data) {
+  var width = 640, height = 280;
+  var marginLeft = 64, marginRight = 16, marginTop = 16, marginBottom = 28;
+  var plotW = width - marginLeft - marginRight;
+  var plotH = height - marginTop - marginBottom;
+
+  var points = data.points.map(function(p) {
+    var d = new Date(p.date + "T00:00:00");
+    return { date: p.date, dateObj: d, balance: p.balance, label: p.label, realized: p.realized };
+  });
+
+  var xMin = points[0].dateObj.getTime();
+  var xMax = points[points.length - 1].dateObj.getTime();
+  var balances = points.map(function(p) { return p.balance; });
+  var yMin = Math.min.apply(null, balances.concat([0]));
+  var yMax = Math.max.apply(null, balances.concat([0]));
+  if (yMin === yMax) { yMin -= 1; yMax += 1; }
+  var yPad = (yMax - yMin) * 0.1 || 1;
+  yMin -= yPad; yMax += yPad;
+
+  function xPos(t) {
+    if (xMax === xMin) return marginLeft;
+    return marginLeft + ((t - xMin) / (xMax - xMin)) * plotW;
+  }
+  function yPos(v) {
+    return marginTop + (1 - (v - yMin) / (yMax - yMin)) * plotH;
+  }
+
+  var coords = points.map(function(p) {
+    return {
+      x: xPos(p.dateObj.getTime()),
+      y: yPos(p.balance),
+      date: p.date, dateObj: p.dateObj, balance: p.balance, label: p.label, realized: p.realized
+    };
+  });
+
+  var splitIdx = 0;
+  for (var i = 0; i < coords.length; i++) {
+    if (coords[i].realized) { splitIdx = i; } else { break; }
+  }
+  var solidCoords = coords.slice(0, splitIdx + 1);
+  var dashedCoords = coords.slice(splitIdx);
+
+  function pathFor(cs) {
+    return cs.map(function(c, i) {
+      return (i === 0 ? "M " : "L ") + c.x.toFixed(1) + " " + c.y.toFixed(1);
+    }).join(" ");
+  }
+
+  var steps = 4;
+  var gridSvg = "";
+  var zeroThreshold = (yMax - yMin) * 0.03;
+  for (var s = 0; s <= steps; s++) {
+    var v = yMin + (s / steps) * (yMax - yMin);
+    if (Math.abs(v) < zeroThreshold) continue; // the emphasized zero line below covers this
+    var y = yPos(v);
+    gridSvg += '<line x1="' + marginLeft + '" y1="' + y.toFixed(1) + '" x2="' + (width - marginRight) + '" y2="' + y.toFixed(1) + '" class="chart-grid" />';
+    gridSvg += '<text x="' + (marginLeft - 8) + '" y="' + (y + 4).toFixed(1) + '" class="chart-axis-label" text-anchor="end">' + Math.round(v).toLocaleString() + '</text>';
+  }
+
+  // zero line is always in range (yMin/yMax padding always includes 0) and is
+  // emphasized so the reader can immediately see a negative balance
+  var zeroY = yPos(0);
+  gridSvg += '<line x1="' + marginLeft + '" y1="' + zeroY.toFixed(1) + '" x2="' + (width - marginRight) + '" y2="' + zeroY.toFixed(1) + '" class="chart-zero-line" />';
+  gridSvg += '<text x="' + (marginLeft - 8) + '" y="' + (zeroY + 4).toFixed(1) + '" class="chart-axis-label-zero" text-anchor="end">0</text>';
+
+  // X axis: day-of-month ticks spanning the whole displayed month
+  var monthStart = new Date(data.start + "T00:00:00");
+  var daysInMonth = new Date(data.end + "T00:00:00").getDate();
+  var xAxisSvg = "";
+  var tickCount = 5;
+  for (var t = 0; t < tickCount; t++) {
+    var dayNum = Math.round(1 + t * (daysInMonth - 1) / (tickCount - 1));
+    var tickDate = new Date(monthStart.getFullYear(), monthStart.getMonth(), dayNum);
+    var tx = xPos(tickDate.getTime());
+    xAxisSvg += '<text x="' + tx.toFixed(1) + '" y="' + (height - marginBottom + 18) + '" class="chart-axis-label" text-anchor="middle">' + dayNum + '</text>';
+  }
+
+  var lastPoint = coords[coords.length - 1];
+
+  container.innerHTML =
+    '<svg viewBox="0 0 ' + width + ' ' + height + '" class="balance-chart-svg">' +
+      gridSvg +
+      xAxisSvg +
+      '<path d="' + pathFor(solidCoords) + '" class="chart-line-realized" fill="none" />' +
+      (dashedCoords.length > 1 ? '<path d="' + pathFor(dashedCoords) + '" class="chart-line-projected" fill="none" />' : '') +
+      '<circle cx="' + lastPoint.x.toFixed(1) + '" cy="' + lastPoint.y.toFixed(1) + '" r="5" class="chart-end-dot" />' +
+    '</svg>' +
+    '<div class="chart-tooltip" hidden></div>';
+
+  var svgEl = container.querySelector("svg");
+  var tooltip = container.querySelector(".chart-tooltip");
+
+  var crosshair = document.createElementNS("http://www.w3.org/2000/svg", "line");
+  crosshair.setAttribute("class", "chart-crosshair");
+  crosshair.setAttribute("y1", marginTop);
+  crosshair.setAttribute("y2", height - marginBottom);
+  crosshair.setAttribute("visibility", "hidden");
+  svgEl.appendChild(crosshair);
+
+  function nearestPoint(mouseX) {
+    var nearest = coords[0], minDist = Infinity;
+    for (var j = 0; j < coords.length; j++) {
+      var d = Math.abs(coords[j].x - mouseX);
+      if (d < minDist) { minDist = d; nearest = coords[j]; }
+    }
+    return nearest;
+  }
+
+  svgEl.addEventListener("pointermove", function(evt) {
+    var rect = svgEl.getBoundingClientRect();
+    var scaleX = width / rect.width;
+    var mouseX = (evt.clientX - rect.left) * scaleX;
+    var nearest = nearestPoint(mouseX);
+
+    crosshair.setAttribute("x1", nearest.x);
+    crosshair.setAttribute("x2", nearest.x);
+    crosshair.setAttribute("visibility", "visible");
+
+    tooltip.hidden = false;
+    tooltip.innerHTML = "";
+    var strong = document.createElement("strong");
+    strong.textContent = nearest.balance.toFixed(2) + " " + data.currency;
+    var small = document.createElement("div");
+    small.className = "muted";
+    var dateLabel = nearest.dateObj.toLocaleDateString();
+    small.textContent = nearest.label ? (dateLabel + " — " + nearest.label) : dateLabel;
+    tooltip.appendChild(strong);
+    tooltip.appendChild(small);
+
+    var px = (nearest.x / width) * rect.width;
+    var py = (nearest.y / height) * rect.height;
+    tooltip.style.left = Math.min(px + 12, rect.width - 150) + "px";
+    tooltip.style.top = Math.max(py - 44, 0) + "px";
+  });
+  svgEl.addEventListener("pointerleave", function() {
+    crosshair.setAttribute("visibility", "hidden");
+    tooltip.hidden = true;
+  });
+}
+</script>
+{% endif %}
+{% endblock %}

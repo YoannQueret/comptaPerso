@@ -1,0 +1,38 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="card" style="max-width:500px;">
+  <h1>{{ _("edit") if category else _("add") }} — {{ _("categories") }}</h1>
+  <form method="post">
+  <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+    <div class="form-group">
+      <label>{{ _("name") }}</label>
+      <input type="text" name="name" value="{{ category.name if category else '' }}" required autofocus>
+    </div>
+    <div class="form-row">
+      <div class="form-group">
+        <label>{{ _("type") }}</label>
+        <select name="kind">
+          {% for k in kinds %}
+          <option value="{{ k }}" {{ 'selected' if category and category.kind==k else '' }}>{{ k|kind_label }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div class="form-group">
+        <label>{{ _("color") }}</label>
+        <input type="color" name="color" value="{{ category.color if category else '#6c757d' }}">
+      </div>
+    </div>
+    <div class="form-group">
+      <label>{{ _("parent_category_optional") }}</label>
+      <select name="parent_id">
+        <option value="">— {{ _("root_category") }} —</option>
+        {% for p in parents %}
+        <option value="{{ p.id }}" {{ 'selected' if category and category.parent_id==p.id else '' }}>{{ p.name }}</option>
+        {% endfor %}
+      </select>
+    </div>
+    <button class="btn" type="submit">{{ _("save") }}</button>
+    <a class="btn btn-secondary" href="{{ url_for('categories.list_categories') }}">{{ _("cancel") }}</a>
+  </form>
+</div>
+{% endblock %}
