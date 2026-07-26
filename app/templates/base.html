@@ -53,6 +53,9 @@
 
   {% block content %}{% endblock %}
 </main>
+<footer class="app-footer">
+  comptaPerso v{{ app_version }} · <a href="https://github.com/YoannQueret/comptaPerso" target="_blank" rel="noopener">GitHub</a>
+</footer>
 <script>
 window.MONTH_NAMES = [{% for i in range(1, 13) %}{{ month_name(locale, i)|tojson }}{% if not loop.last %},{% endif %}{% endfor %}];
 </script>

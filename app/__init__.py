@@ -8,7 +8,7 @@ from flask import Flask, session, g, render_template
 from flask_wtf import CSRFProtect
 from flask_migrate import upgrade as migrate_upgrade
 
-from app.config import Config
+from app.config import BASE_DIR, Config
 from app.extensions import db, login_manager, migrate
 from app.translations import (
     get_translator,
@@ -20,6 +20,17 @@ from app.translations import (
 csrf = CSRFProtect()
 
 logger = logging.getLogger(__name__)
+
+
+def _read_version():
+    try:
+        with open(os.path.join(BASE_DIR, "VERSION")) as f:
+            return f.read().strip()
+    except OSError:
+        return "dev"
+
+
+APP_VERSION = _read_version()
 
 
 def _backup_sqlite_database(app):
@@ -113,7 +124,8 @@ def create_app():
                     current_user=current_user,
                     now=date.today(),
                     allow_registration=app.config["ALLOW_REGISTRATION"],
-                    month_name=_month_name)
+                    month_name=_month_name,
+                    app_version=APP_VERSION)
 
     from app.routes.auth import bp as auth_bp
     from app.routes.main import bp as main_bp

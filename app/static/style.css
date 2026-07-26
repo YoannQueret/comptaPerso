@@ -221,6 +221,15 @@ form.inline { display: inline; }
 }
 .chart-tooltip strong { display: block; color: var(--text); }
 
+.app-footer {
+  text-align: center;
+  padding: 1.5rem 1rem 1rem;
+  color: var(--muted);
+  font-size: 0.78rem;
+}
+.app-footer a { color: var(--muted); }
+.app-footer a:hover { color: var(--primary); }
+
 .month-picker-display { cursor: pointer; background: var(--card-bg); }
 .month-picker-popup {
   position: fixed;
