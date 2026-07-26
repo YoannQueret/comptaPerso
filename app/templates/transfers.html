@@ -6,8 +6,12 @@
 </div>
 
 <div class="card">
+  <div class="form-group" style="max-width:320px;">
+    <label>{{ _("search") }}</label>
+    <input type="search" class="table-search" data-table="transfers-table" data-empty-label="{{ _('no_search_results') }}" placeholder="{{ _('search_placeholder') }}">
+  </div>
   <div class="table-wrap">
-  <table>
+  <table id="transfers-table">
     <thead>
       <tr><th>{{ _("date") }}</th><th>{{ _("from_account") }}</th><th>{{ _("to_account") }}</th><th>{{ _("amount_sent") }}</th><th>{{ _("amount_received") }}</th><th>{{ _("description") }}</th><th></th></tr>
     </thead>

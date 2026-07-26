@@ -6,8 +6,12 @@
 </div>
 
 <div class="card">
+  <div class="form-group" style="max-width:320px;">
+    <label>{{ _("search") }}</label>
+    <input type="search" class="table-search" data-table="recurring-table" data-empty-label="{{ _('no_search_results') }}" placeholder="{{ _('search_placeholder') }}">
+  </div>
   <div class="table-wrap">
-  <table>
+  <table id="recurring-table">
     <thead>
       <tr>
         {% for key, label in [('name', _("name")), ('account', _("account")), ('category', _("category")), ('amount', _("amount"))] %}

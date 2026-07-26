@@ -39,8 +39,12 @@
 </div>
 
 <div class="card">
+  <div class="form-group" style="max-width:320px;">
+    <label>{{ _("search") }}</label>
+    <input type="search" class="table-search" data-table="transactions-table" data-empty-label="{{ _('no_search_results') }}" placeholder="{{ _('search_placeholder') }}">
+  </div>
   <div class="table-wrap">
-  <table>
+  <table id="transactions-table">
     <thead>
       <tr>
         <th>
@@ -50,14 +54,13 @@
             {{ _("date") }} {{ '↓' if sort == 'date_desc' else '↑' }}
           </a>
         </th>
-        <th>{{ _("account") }}</th><th>{{ _("category") }}</th><th>{{ _("description") }}</th><th>{{ _("amount") }}</th><th></th>
+        <th>{{ _("category") }}</th><th>{{ _("description") }}</th><th>{{ _("amount") }}</th><th></th>
       </tr>
     </thead>
     <tbody>
       {% for t in transactions %}
       <tr class="{{ 'future-tx' if t.date > today else '' }}">
         <td>{{ t.date.strftime('%d/%m/%Y') }}{% if t.date > today %} <span class="badge-future">{{ _("future") }}</span>{% endif %}{% if t.budget_month != t.date.replace(day=1) %} <span class="muted" title="{{ _('budget_month') }}">→ {{ month_name(locale, t.budget_month.month) }} {{ t.budget_month.year }}</span>{% endif %}</td>
-        <td>{{ t.account.name }}</td>
         <td>
           {% if t.is_transfer %}
           <span class="muted">
@@ -86,7 +89,7 @@
         </td>
       </tr>
       {% else %}
-      <tr><td colspan="6">{{ _("no_data") }}</td></tr>
+      <tr><td colspan="5">{{ _("no_data") }}</td></tr>
       {% endfor %}
     </tbody>
   </table>
