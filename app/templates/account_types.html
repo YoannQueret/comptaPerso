@@ -11,14 +11,14 @@
     <input type="search" class="table-search" data-table="account-types-table" data-empty-label="{{ _('no_search_results') }}" placeholder="{{ _('search_placeholder') }}">
   </div>
   <div class="table-wrap">
-  <table id="account-types-table">
+  <table id="account-types-table" class="table-responsive">
     <thead>
       <tr><th>{{ _("name") }}</th><th></th></tr>
     </thead>
     <tbody>
       {% for at in account_types %}
       <tr>
-        <td>{{ at.name }}</td>
+        <td data-label="{{ _('name') }}">{{ at.name }}</td>
         <td>
           <a class="btn btn-sm btn-secondary" href="{{ url_for('account_types.edit_account_type', account_type_id=at.id) }}">{{ _("edit") }}</a>
           <form class="inline" method="post" action="{{ url_for('account_types.delete_account_type', account_type_id=at.id) }}" onsubmit="return confirm('{{ _("confirm_delete_account_type") }}');">

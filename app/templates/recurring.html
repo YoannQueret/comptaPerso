@@ -11,7 +11,7 @@
     <input type="search" class="table-search" data-table="recurring-table" data-empty-label="{{ _('no_search_results') }}" placeholder="{{ _('search_placeholder') }}">
   </div>
   <div class="table-wrap">
-  <table id="recurring-table">
+  <table id="recurring-table" class="table-responsive">
     <thead>
       <tr>
         {% for key, label in [('name', _("name")), ('account', _("account")), ('category', _("category")), ('amount', _("amount"))] %}
@@ -33,18 +33,18 @@
     <tbody>
       {% for r in rules %}
       <tr>
-        <td>{{ r.label }}{% if not r.active %} <span class="muted">{{ _("inactive_suffix") }}</span>{% endif %}</td>
-        <td>{{ r.account.name }}{% if r.is_transfer %} → {{ r.to_account.name }}{% endif %}</td>
-        <td>
+        <td data-label="{{ _('name') }}">{{ r.label }}{% if not r.active %} <span class="muted">{{ _("inactive_suffix") }}</span>{% endif %}</td>
+        <td data-label="{{ _('account') }}">{{ r.account.name }}{% if r.is_transfer %} → {{ r.to_account.name }}{% endif %}</td>
+        <td data-label="{{ _('category') }}">
           {% if r.is_transfer %}
           <span class="muted">{{ _("transfer") }}</span>
           {% else %}
           {{ r.category.full_name if r.category else '—' }}
           {% endif %}
         </td>
-        <td class="{{ 'amount-positive' if r.amount >= 0 else 'amount-negative' }}">{{ "%.2f"|format(r.amount) }} {{ r.account.currency }}</td>
-        <td>{{ r.periodicity|periodicity_label }} (x{{ r.interval }})</td>
-        <td>{{ r.next_due_date.strftime('%d/%m/%Y') }}</td>
+        <td data-label="{{ _('amount') }}" class="{{ 'amount-positive' if r.amount >= 0 else 'amount-negative' }}">{{ "%.2f"|format(r.amount) }} {{ r.account.currency }}</td>
+        <td data-label="{{ _('periodicity') }}">{{ r.periodicity|periodicity_label }} (x{{ r.interval }})</td>
+        <td data-label="{{ _('next_due_date_label') }}">{{ r.next_due_date.strftime('%d/%m/%Y') }}</td>
         <td>
           <a class="btn btn-sm btn-secondary" href="{{ url_for('recurring.edit_recurring', rule_id=r.id) }}">{{ _("edit") }}</a>
           <form class="inline" method="post" action="{{ url_for('recurring.delete_recurring', rule_id=r.id) }}" onsubmit="return confirm('{{ _("confirm_delete_recurring") }}');">

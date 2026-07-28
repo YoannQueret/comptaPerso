@@ -53,6 +53,15 @@
 
   {% block content %}{% endblock %}
 </main>
+{% if current_user.is_authenticated %}
+<dialog id="attachment-dialog" class="modal" style="max-width:700px;">
+  <div class="toolbar" style="margin-bottom:0.75rem;">
+    <h2 style="margin:0;">{{ _("attachment") }}</h2>
+    <button type="button" class="btn btn-secondary btn-sm" onclick="document.getElementById('attachment-dialog').close()">{{ _("close") }}</button>
+  </div>
+  <div id="attachment-dialog-content"></div>
+</dialog>
+{% endif %}
 <footer class="app-footer">
   comptaPerso v{{ app_version }} · <a href="https://github.com/YoannQueret/comptaPerso" target="_blank" rel="noopener">GitHub</a>
 </footer>
@@ -61,5 +70,6 @@ window.MONTH_NAMES = [{% for i in range(1, 13) %}{{ month_name(locale, i)|tojson
 </script>
 <script src="{{ url_for('static', filename='month-picker.js') }}"></script>
 <script src="{{ url_for('static', filename='table-search.js') }}"></script>
+<script src="{{ url_for('static', filename='attachment-viewer.js') }}"></script>
 </body>
 </html>

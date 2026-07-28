@@ -5,36 +5,44 @@
   <a class="btn" href="{{ url_for('categories.new_category') }}">+ {{ _("add") }}</a>
 </div>
 
-<div class="card">
-  {% for root in roots %}
-  <div style="margin-bottom:0.75rem;">
-    <div style="display:flex;align-items:center;gap:0.5rem;">
+{% if roots %}
+{% for root in roots %}
+<div class="card category-card">
+  <div class="category-row category-row-root">
+    <div class="category-info">
       <span class="category-dot" style="background:{{ root.color }};"></span>
       <strong>{{ root.name }}</strong>
       <span class="badge-kind badge-kind-{{ root.kind }}">{{ root.kind|kind_label }}</span>
+    </div>
+    <div class="category-actions">
       <a class="btn btn-sm btn-secondary" href="{{ url_for('categories.edit_category', category_id=root.id) }}">{{ _("edit") }}</a>
       <form class="inline" method="post" action="{{ url_for('categories.delete_category', category_id=root.id) }}" onsubmit="return confirm('{{ _("confirm_delete_category") }}');">
   <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
         <button class="btn btn-sm btn-danger" type="submit">{{ _("delete") }}</button>
       </form>
     </div>
-    {% if root.children %}
-    <ul>
-      {% for child in root.children %}
-      <li style="margin:0.3rem 0;">
-        {{ child.name }}
+  </div>
+  {% if root.children %}
+  <div class="category-children">
+    {% for child in root.children %}
+    <div class="category-row category-row-child">
+      <div class="category-info">{{ child.name }}</div>
+      <div class="category-actions">
         <a class="btn btn-sm btn-secondary" href="{{ url_for('categories.edit_category', category_id=child.id) }}">{{ _("edit") }}</a>
         <form class="inline" method="post" action="{{ url_for('categories.delete_category', category_id=child.id) }}" onsubmit="return confirm('{{ _("confirm_delete_subcategory") }}');">
   <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
           <button class="btn btn-sm btn-danger" type="submit">{{ _("delete") }}</button>
         </form>
-      </li>
-      {% endfor %}
-    </ul>
-    {% endif %}
+      </div>
+    </div>
+    {% endfor %}
   </div>
-  {% else %}
-  <p>{{ _("no_data") }}</p>
-  {% endfor %}
+  {% endif %}
 </div>
+{% endfor %}
+{% else %}
+<div class="card">
+  <p>{{ _("no_data") }}</p>
+</div>
+{% endif %}
 {% endblock %}

@@ -11,19 +11,19 @@
     <input type="search" class="table-search" data-table="transfers-table" data-empty-label="{{ _('no_search_results') }}" placeholder="{{ _('search_placeholder') }}">
   </div>
   <div class="table-wrap">
-  <table id="transfers-table">
+  <table id="transfers-table" class="table-responsive">
     <thead>
       <tr><th>{{ _("date") }}</th><th>{{ _("from_account") }}</th><th>{{ _("to_account") }}</th><th>{{ _("amount_sent") }}</th><th>{{ _("amount_received") }}</th><th>{{ _("description") }}</th><th></th></tr>
     </thead>
     <tbody>
       {% for out_tx, in_tx in pairs %}
       <tr>
-        <td>{{ out_tx.date.strftime('%d/%m/%Y') }}</td>
-        <td>{{ out_tx.account.name }}</td>
-        <td>{{ in_tx.account.name if in_tx else '—' }}</td>
-        <td class="amount-negative">{{ "%.2f"|format(out_tx.amount|abs) }} {{ out_tx.account.currency }}</td>
-        <td class="amount-positive">{{ "%.2f"|format(in_tx.amount) if in_tx else '—' }} {{ in_tx.account.currency if in_tx else '' }}</td>
-        <td>{{ out_tx.description }}</td>
+        <td data-label="{{ _('date') }}">{{ out_tx.date.strftime('%d/%m/%Y') }}</td>
+        <td data-label="{{ _('from_account') }}">{{ out_tx.account.name }}</td>
+        <td data-label="{{ _('to_account') }}">{{ in_tx.account.name if in_tx else '—' }}</td>
+        <td data-label="{{ _('amount_sent') }}" class="amount-negative">{{ "%.2f"|format(out_tx.amount|abs) }} {{ out_tx.account.currency }}</td>
+        <td data-label="{{ _('amount_received') }}" class="amount-positive">{{ "%.2f"|format(in_tx.amount) if in_tx else '—' }} {{ in_tx.account.currency if in_tx else '' }}</td>
+        <td data-label="{{ _('description') }}">{{ out_tx.description }}</td>
         <td>
           <a class="btn btn-sm btn-secondary" href="{{ url_for('transfers.edit_transfer', group_id=out_tx.transfer_group_id, next=request.full_path) }}">{{ _("edit") }}</a>
           <form class="inline" method="post" action="{{ url_for('transfers.delete_transfer', group_id=out_tx.transfer_group_id) }}" onsubmit="return confirm('{{ _("confirm_delete_transfer") }}');">

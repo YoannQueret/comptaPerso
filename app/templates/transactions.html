@@ -44,7 +44,7 @@
     <input type="search" class="table-search" data-table="transactions-table" data-empty-label="{{ _('no_search_results') }}" placeholder="{{ _('search_placeholder') }}">
   </div>
   <div class="table-wrap">
-  <table id="transactions-table">
+  <table id="transactions-table" class="table-responsive">
     <thead>
       <tr>
         <th>
@@ -60,8 +60,8 @@
     <tbody>
       {% for t in transactions %}
       <tr class="{{ 'future-tx' if t.date > today else '' }}">
-        <td>{{ t.date.strftime('%d/%m/%Y') }}{% if t.date > today %} <span class="badge-future">{{ _("future") }}</span>{% endif %}{% if t.budget_month != t.date.replace(day=1) %} <span class="muted" title="{{ _('budget_month') }}">→ {{ month_name(locale, t.budget_month.month) }} {{ t.budget_month.year }}</span>{% endif %}</td>
-        <td>
+        <td data-label="{{ _('date') }}">{{ t.date.strftime('%d/%m/%Y') }}{% if t.date > today %} <span class="badge-future">{{ _("future") }}</span>{% endif %}{% if t.budget_month != t.date.replace(day=1) %} <span class="muted" title="{{ _('budget_month') }}">→ {{ month_name(locale, t.budget_month.month) }} {{ t.budget_month.year }}</span>{% endif %}</td>
+        <td data-label="{{ _('category') }}">
           {% if t.is_transfer %}
           <span class="muted">
             {% set cp = transfer_counterparts.get(t.id) %}
@@ -71,9 +71,10 @@
           {{ t.category.full_name if t.category else '—' }}
           {% endif %}
         </td>
-        <td>{{ t.description or '—' }}{% if t.attachment_filename %} <a href="{{ url_for('transactions.view_attachment', tx_id=t.id) }}" target="_blank" title="{{ _('view_attachment') }}">📎</a>{% endif %}</td>
-        <td class="{{ 'amount-positive' if t.amount >= 0 else 'amount-negative' }}">{{ "%.2f"|format(t.amount) }} {{ t.account.currency }}</td>
+        <td data-label="{{ _('description') }}">{{ t.description or '—' }}</td>
+        <td data-label="{{ _('amount') }}" class="{{ 'amount-positive' if t.amount >= 0 else 'amount-negative' }}">{{ "%.2f"|format(t.amount) }} {{ t.account.currency }}</td>
         <td>
+          <span class="attachment-slot">{%- if t.attachment_filename -%}<button type="button" class="attachment-btn" title="{{ _('view_attachment') }}" onclick="openAttachment('{{ url_for('transactions.view_attachment', tx_id=t.id) }}', '{{ t.attachment_filename.rsplit('.', 1)[-1] }}', '{{ _('open_in_new_tab') }}')">📎</button>{%- endif -%}</span>
           {% if t.is_transfer %}
           <form class="inline" method="post" action="{{ url_for('transfers.delete_transfer', group_id=t.transfer_group_id) }}" onsubmit="return confirm('{{ _("confirm_delete_transfer") }}');">
   <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">

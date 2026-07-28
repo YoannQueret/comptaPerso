@@ -36,7 +36,7 @@
     <div class="muted">{{ _("net") }}</div>
     <div class="stat-value {{ 'amount-positive' if (total_income-total_expenses) >= 0 else 'amount-negative' }}">{{ "%.2f"|format(total_income - total_expenses) }}</div>
   </div>
-  <div class="card">
+  <div class="card card-highlight">
     <div class="muted">{{ _("net_with_carryover") }}</div>
     <div class="stat-value {{ 'amount-positive' if net_with_carryover >= 0 else 'amount-negative' }}">{{ "%.2f"|format(net_with_carryover) }}</div>
     <p class="muted">{{ _("net_with_carryover_hint") }}</p>
@@ -69,19 +69,18 @@
   <input type="hidden" name="account_id" value="{{ selected_account_id or '' }}"></form>
   {% endfor %}
   <div class="table-wrap">
-  <table>
+  <table class="table-responsive">
     <thead>
-      <tr><th>{{ _("name") }}</th><th>{{ _("account") }}</th><th>{{ _("date") }}</th><th>{{ _("budget_month") }}</th><th>{{ _("amount") }}</th><th>{{ _("amount_received") }}</th><th></th></tr>
+      <tr><th>{{ _("name") }}</th><th>{{ _("date") }}</th><th>{{ _("budget_month") }}</th><th>{{ _("amount") }}</th><th>{{ _("amount_received") }}</th><th></th></tr>
     </thead>
     <tbody>
       {% for rule in due_rules %}
       <tr class="due-row">
-        <td>{{ rule.label }}{% if rule.next_due_date < start %} <span class="muted">{{ _("overdue_suffix") }}</span>{% endif %}</td>
-        <td>{{ rule.account.name }} ({{ rule.account.currency }}){% if rule.is_transfer %} → {{ rule.to_account.name }}{% endif %}</td>
-        <td><input form="form-{{ rule.id }}" type="date" name="date" value="{{ rule.next_due_date.isoformat() }}" style="min-width:140px;"></td>
-        <td><input form="form-{{ rule.id }}" type="month" name="budget_month" value="{{ rule.next_due_date.strftime('%Y-%m') }}" style="min-width:110px;"></td>
-        <td><input form="form-{{ rule.id }}" type="text" inputmode="decimal" name="amount" value="{{ rule.amount|abs }}" style="max-width:110px;"></td>
-        <td>
+        <td data-label="{{ _('name') }}">{{ rule.label }}{% if rule.is_transfer %} <span class="muted">→ {{ rule.to_account.name }}</span>{% endif %}{% if rule.next_due_date < start %} <span class="muted">{{ _("overdue_suffix") }}</span>{% endif %}</td>
+        <td data-label="{{ _('date') }}"><input form="form-{{ rule.id }}" type="date" name="date" value="{{ rule.next_due_date.isoformat() }}" style="min-width:140px;"></td>
+        <td data-label="{{ _('budget_month') }}"><input form="form-{{ rule.id }}" type="month" name="budget_month" value="{{ rule.next_due_date.strftime('%Y-%m') }}" style="min-width:110px;"></td>
+        <td data-label="{{ _('amount') }}"><input form="form-{{ rule.id }}" type="text" inputmode="decimal" name="amount" value="{{ rule.amount|abs }}" style="max-width:110px;"></td>
+        <td data-label="{{ _('amount_received') }}">
           {% if rule.is_transfer %}
           <input form="form-{{ rule.id }}" type="text" inputmode="decimal" name="amount_received" value="{{ rule.amount_received|abs if rule.amount_received else rule.amount|abs }}" style="max-width:110px;">
           {% else %}
@@ -97,7 +96,7 @@
         </td>
       </tr>
       {% else %}
-      <tr><td colspan="7">{{ _("no_data") }}</td></tr>
+      <tr><td colspan="6">{{ _("no_data") }}</td></tr>
       {% endfor %}
     </tbody>
   </table>
@@ -107,21 +106,20 @@
 <div class="card">
   <h2>{{ _("validated_this_month") }}</h2>
   <div class="table-wrap">
-  <table>
-    <thead><tr><th>{{ _("date") }}</th><th>{{ _("account") }}</th><th>{{ _("description") }}</th><th>{{ _("amount") }}</th><th></th></tr></thead>
+  <table class="table-aligned table-responsive">
+    <thead><tr><th class="col-date">{{ _("date") }}</th><th class="col-description">{{ _("description") }}</th><th>{{ _("amount") }}</th><th></th></tr></thead>
     <tbody>
       {% for t in validated_txs %}
       <tr>
-        <td>{{ t.date.strftime('%d/%m/%Y') }}{% if t.budget_month != t.date.replace(day=1) %} <span class="muted" title="{{ _('budget_month') }}">→ {{ month_name(locale, t.budget_month.month) }} {{ t.budget_month.year }}</span>{% endif %}</td>
-        <td>{{ t.account.name }}</td>
-        <td>
+        <td data-label="{{ _('date') }}">{{ t.date.strftime('%d/%m/%Y') }}{% if t.budget_month != t.date.replace(day=1) %} <span class="muted" title="{{ _('budget_month') }}">→ {{ month_name(locale, t.budget_month.month) }} {{ t.budget_month.year }}</span>{% endif %}</td>
+        <td data-label="{{ _('description') }}">
           {% if t.is_transfer %}
           <span class="muted">{{ _("transfer") }} {{ '→' if t.amount < 0 else '←' }} {{ t.recurring_rule.to_account.name if t.amount < 0 else t.recurring_rule.account.name }}</span>
           {% else %}
           {{ t.description }}
           {% endif %}
         </td>
-        <td class="{{ 'amount-positive' if t.amount >= 0 else 'amount-negative' }}">{{ "%.2f"|format(t.amount) }} {{ t.account.currency }}</td>
+        <td data-label="{{ _('amount') }}" class="{{ 'amount-positive' if t.amount >= 0 else 'amount-negative' }}">{{ "%.2f"|format(t.amount) }} {{ t.account.currency }}</td>
         <td>
           {% if t.is_transfer %}
           <a class="btn btn-sm btn-secondary" href="{{ url_for('transfers.edit_transfer', group_id=t.transfer_group_id, next=request.full_path) }}">{{ _("edit") }}</a>
@@ -138,7 +136,7 @@
         </td>
       </tr>
       {% else %}
-      <tr><td colspan="5">{{ _("no_data") }}</td></tr>
+      <tr><td colspan="4">{{ _("no_data") }}</td></tr>
       {% endfor %}
     </tbody>
   </table>
@@ -151,14 +149,15 @@
     <button type="button" class="btn btn-sm" onclick="document.getElementById('add-tx-dialog').showModal()">+ {{ _("add") }}</button>
   </div>
   <div class="table-wrap">
-  <table>
-    <thead><tr><th>{{ _("date") }}</th><th>{{ _("account") }}</th><th>{{ _("category") }}</th><th>{{ _("description") }}</th><th>{{ _("amount") }}</th></tr></thead>
+  <table class="table-aligned table-responsive">
+    <thead><tr><th class="col-date">{{ _("date") }}</th><th class="col-description">{{ _("description") }}</th><th>{{ _("amount") }}</th><th>{{ _("category") }}</th><th></th></tr></thead>
     <tbody>
       {% for t in other_txs %}
       <tr>
-        <td>{{ t.date.strftime('%d/%m/%Y') }}{% if t.budget_month != t.date.replace(day=1) %} <span class="muted" title="{{ _('budget_month') }}">→ {{ month_name(locale, t.budget_month.month) }} {{ t.budget_month.year }}</span>{% endif %}</td>
-        <td>{{ t.account.name }}</td>
-        <td>
+        <td data-label="{{ _('date') }}">{{ t.date.strftime('%d/%m/%Y') }}{% if t.budget_month != t.date.replace(day=1) %} <span class="muted" title="{{ _('budget_month') }}">→ {{ month_name(locale, t.budget_month.month) }} {{ t.budget_month.year }}</span>{% endif %}</td>
+        <td data-label="{{ _('description') }}">{{ t.description or '—' }}</td>
+        <td data-label="{{ _('amount') }}" class="{{ 'amount-positive' if t.amount >= 0 else 'amount-negative' }}">{{ "%.2f"|format(t.amount) }} {{ t.account.currency }}</td>
+        <td data-label="{{ _('category') }}">
           {% if t.is_transfer %}
           {% set cp = transfer_counterparts.get(t.id) %}
           <span class="muted">{{ _("transfer") }}{% if cp %} {{ '→' if t.amount < 0 else '←' }} {{ cp.account.name }}{% endif %}</span>
@@ -166,8 +165,7 @@
           {{ t.category.full_name if t.category else '—' }}
           {% endif %}
         </td>
-        <td>{{ t.description or '—' }}{% if t.attachment_filename %} <a href="{{ url_for('transactions.view_attachment', tx_id=t.id) }}" target="_blank" title="{{ _('view_attachment') }}">📎</a>{% endif %}</td>
-        <td class="{{ 'amount-positive' if t.amount >= 0 else 'amount-negative' }}">{{ "%.2f"|format(t.amount) }} {{ t.account.currency }}</td>
+        <td class="attachment-cell">{%- if t.attachment_filename -%}<button type="button" class="attachment-btn" title="{{ _('view_attachment') }}" onclick="openAttachment('{{ url_for('transactions.view_attachment', tx_id=t.id) }}', '{{ t.attachment_filename.rsplit('.', 1)[-1] }}', '{{ _('open_in_new_tab') }}')">📎</button>{%- endif -%}</td>
       </tr>
       {% else %}
       <tr><td colspan="5">{{ _("no_data") }}</td></tr>

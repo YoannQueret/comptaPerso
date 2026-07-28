@@ -35,18 +35,18 @@
 <div class="card">
   <h2>{{ _("transactions") }} ({{ _("period") }})</h2>
   <div class="table-wrap">
-  <table>
+  <table class="table-responsive">
     <thead>
       <tr><th>{{ _("date") }}</th><th>{{ _("account") }}</th><th>{{ _("category") }}</th><th>{{ _("description") }}</th><th>{{ _("amount") }}</th></tr>
     </thead>
     <tbody>
       {% for t in recent %}
       <tr>
-        <td>{{ t.date.strftime('%d/%m/%Y') }}</td>
-        <td>{{ t.account.name }}</td>
-        <td>{{ t.category.full_name if t.category else '—' }}</td>
-        <td>{{ t.description or '—' }}</td>
-        <td class="{{ 'amount-positive' if t.amount >= 0 else 'amount-negative' }}">{{ "%.2f"|format(t.amount) }} {{ t.account.currency }}</td>
+        <td data-label="{{ _('date') }}">{{ t.date.strftime('%d/%m/%Y') }}</td>
+        <td data-label="{{ _('account') }}">{{ t.account.name }}</td>
+        <td data-label="{{ _('category') }}">{{ t.category.full_name if t.category else '—' }}</td>
+        <td data-label="{{ _('description') }}">{{ t.description or '—' }}</td>
+        <td data-label="{{ _('amount') }}" class="{{ 'amount-positive' if t.amount >= 0 else 'amount-negative' }}">{{ "%.2f"|format(t.amount) }} {{ t.account.currency }}</td>
       </tr>
       {% else %}
       <tr><td colspan="5">{{ _("no_data") }}</td></tr>

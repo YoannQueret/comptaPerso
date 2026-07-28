@@ -98,12 +98,25 @@ body {
 
 .card-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 1rem; }
 
+.card-highlight {
+  border: 2px solid var(--primary);
+  box-shadow: 0 4px 16px rgba(37, 99, 235, 0.18);
+}
+.card-highlight .stat-value { font-size: 1.9rem; }
+
 h1 { font-size: 1.5rem; margin-top: 0; }
 h2 { font-size: 1.2rem; }
 
 .table-wrap { overflow-x: auto; }
 table { width: 100%; border-collapse: collapse; }
 th, td { text-align: left; padding: 0.5rem 0.6rem; border-bottom: 1px solid var(--border); font-size: 0.92rem; }
+
+/* Forces the date/description columns to line up at the same width across
+   separate tables stacked on the same page (table-layout needs every column
+   in the header row sized, so the unlabeled ones just get to share the rest). */
+.table-aligned { table-layout: fixed; }
+.table-aligned .col-date { width: 15%; }
+.table-aligned .col-description { width: 40%; }
 th { color: var(--muted); font-weight: 600; }
 
 .amount-positive { color: var(--income); font-weight: 600; }
@@ -179,6 +192,38 @@ form.inline { display: inline; }
 .modal::backdrop { background: rgba(0, 0, 0, 0.45); }
 
 .category-dot { display: inline-block; width: 0.75rem; height: 0.75rem; border-radius: 50%; flex-shrink: 0; }
+
+.category-card { padding: 0.5rem 1.25rem; }
+.category-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 0.5rem 1rem;
+  padding: 0.6rem 0;
+}
+.category-row-root { padding-bottom: 0.75rem; }
+.category-info { display: flex; align-items: center; flex-wrap: wrap; gap: 0.5rem; min-width: 0; }
+.category-actions { display: flex; gap: 0.5rem; flex-shrink: 0; }
+.category-children { border-top: 1px solid var(--border); }
+.category-row-child { padding-left: 1.5rem; border-bottom: 1px solid var(--border); }
+.category-row-child:last-child { border-bottom: none; }
+
+.attachment-image { display: block; max-width: 100%; max-height: 70vh; margin: 0 auto; border-radius: 6px; }
+.attachment-frame { width: 100%; height: 70vh; border: 1px solid var(--border); border-radius: 6px; }
+
+.attachment-cell { width: 2.5rem; text-align: center; }
+.attachment-slot { display: inline-block; width: 1.8rem; text-align: center; vertical-align: middle; margin-right: 0.5rem; }
+.attachment-btn {
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-size: 1.3rem;
+  line-height: 1;
+  padding: 0.2rem;
+  border-radius: 4px;
+}
+.attachment-btn:hover { background: var(--bg); }
 
 .badge-kind { display: inline-block; padding: 0.15rem 0.5rem; border-radius: 999px; font-size: 0.75rem; font-weight: 600; }
 .badge-kind-expense { background: #fee2e2; color: #991b1b; }
@@ -323,4 +368,45 @@ form.inline { display: inline; }
   th, td { padding: 0.4rem 0.5rem; }
 
   .modal { max-width: calc(100vw - 2rem); }
+
+  /* Turns a wide table into a stack of cards instead of a table that scrolls
+     sideways: each row becomes a block, each cell a label/value line (the
+     label comes from data-label, set on the <td> in the template). */
+  .table-responsive thead { display: none; }
+  .table-responsive, .table-responsive tbody, .table-responsive tr, .table-responsive td {
+    display: block;
+    width: 100%;
+  }
+  .table-responsive tr {
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 0.5rem 0.75rem;
+    margin-bottom: 0.75rem;
+  }
+  .table-responsive tr:last-child { margin-bottom: 0; }
+  .table-responsive td {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 0.75rem;
+    padding: 0.35rem 0;
+    border-bottom: 1px solid var(--border);
+    text-align: right;
+  }
+  .table-responsive td:last-child { border-bottom: none; }
+  .table-responsive td::before {
+    content: attr(data-label);
+    font-weight: 600;
+    color: var(--muted);
+    text-align: left;
+    flex-shrink: 0;
+  }
+  .table-responsive td[colspan] {
+    display: block;
+    text-align: center;
+    border-bottom: none;
+  }
+  .table-responsive td[colspan]::before { content: none; }
+  .table-responsive td.attachment-cell:empty { display: none; }
+  .table-responsive .attachment-slot:empty { display: none; }
 }

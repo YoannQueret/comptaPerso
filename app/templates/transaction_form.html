@@ -57,7 +57,7 @@
       <input type="file" name="attachment" accept="image/*,application/pdf" capture="environment">
       {% if transaction and transaction.attachment_filename %}
       <p class="muted">
-        <a href="{{ url_for('transactions.view_attachment', tx_id=transaction.id) }}" target="_blank">{{ _("view_attachment") }}</a>
+        <a href="#" onclick="openAttachment('{{ url_for('transactions.view_attachment', tx_id=transaction.id) }}', '{{ transaction.attachment_filename.rsplit('.', 1)[-1] }}', '{{ _('open_in_new_tab') }}'); return false;">{{ _("view_attachment") }}</a>
         &middot;
         <label><input type="checkbox" name="remove_attachment" style="width:auto;display:inline-block;"> {{ _("remove_attachment") }}</label>
       </p>

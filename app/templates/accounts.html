@@ -11,7 +11,7 @@
     <input type="search" class="table-search" data-table="accounts-table" data-empty-label="{{ _('no_search_results') }}" placeholder="{{ _('search_placeholder') }}">
   </div>
   <div class="table-wrap">
-  <table id="accounts-table">
+  <table id="accounts-table" class="table-responsive">
     <thead>
       <tr>
         <th>{{ _("name") }}</th><th>{{ _("account_number") }}</th><th>{{ _("account_type") }}</th><th>{{ _("currency") }}</th><th>{{ _("balance") }}</th><th>{{ _("default_account") }}</th><th></th>
@@ -20,12 +20,12 @@
     <tbody>
       {% for acc in accounts %}
       <tr>
-        <td><a href="{{ url_for('transactions.list_transactions', account_id=acc.id) }}">{{ acc.name }}</a>{% if not acc.active %} <span class="muted">{{ _("inactive_suffix") }}</span>{% endif %}</td>
-        <td>{{ acc.account_number or '—' }}</td>
-        <td>{{ acc.account_type.name if acc.account_type else '—' }}</td>
-        <td>{{ acc.currency }}</td>
-        <td class="{{ 'amount-positive' if acc.balance >= 0 else 'amount-negative' }}">{{ "%.2f"|format(acc.balance) }}</td>
-        <td>
+        <td data-label="{{ _('name') }}"><a href="{{ url_for('transactions.list_transactions', account_id=acc.id) }}">{{ acc.name }}</a>{% if not acc.active %} <span class="muted">{{ _("inactive_suffix") }}</span>{% endif %}</td>
+        <td data-label="{{ _('account_number') }}">{{ acc.account_number or '—' }}</td>
+        <td data-label="{{ _('account_type') }}">{{ acc.account_type.name if acc.account_type else '—' }}</td>
+        <td data-label="{{ _('currency') }}">{{ acc.currency }}</td>
+        <td data-label="{{ _('balance') }}" class="{{ 'amount-positive' if acc.balance >= 0 else 'amount-negative' }}">{{ "%.2f"|format(acc.balance) }}</td>
+        <td data-label="{{ _('default_account') }}">
           {% if current_user.default_account_id == acc.id %}
           <span class="badge-kind badge-kind-income">{{ _("default_account") }}</span>
           {% else %}
