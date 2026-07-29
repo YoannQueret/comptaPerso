@@ -44,7 +44,12 @@ document.addEventListener('DOMContentLoaded', function () {
 
     var popup = document.createElement('div');
     popup.className = 'month-picker-popup';
-    document.body.appendChild(popup);
+    // A <dialog> shown via showModal() is promoted to the browser's "top
+    // layer" — anything appended to document.body would render behind it
+    // regardless of z-index, so the popup must live inside the same open
+    // dialog when the field is inside one.
+    var hostDialog = displayInput.closest('dialog');
+    (hostDialog || document.body).appendChild(popup);
 
     function render() {
       popup.innerHTML = '';
