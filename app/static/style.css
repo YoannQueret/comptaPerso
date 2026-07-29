@@ -97,6 +97,17 @@ body {
 }
 
 .card-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 1rem; }
+.card-grid-summary { grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); }
+
+.budget-equation { display: flex; flex-direction: column; justify-content: center; gap: 0.35rem; }
+.budget-equation-row { display: flex; justify-content: space-between; align-items: baseline; gap: 1rem; font-size: 0.95rem; }
+.budget-equation-total {
+  border-top: 1px solid var(--border);
+  margin-top: 0.35rem;
+  padding-top: 0.5rem;
+  font-weight: 700;
+  font-size: 1.3rem;
+}
 
 .card-highlight {
   border: 2px solid var(--primary);

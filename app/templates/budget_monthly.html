@@ -23,31 +23,25 @@
   </form>
 </div>
 
-<div class="card-grid">
-  <div class="card">
-    <div class="muted">{{ _("total_expenses") }}</div>
-    <div class="stat-value amount-negative">{{ "%.2f"|format(total_expenses) }}</div>
-  </div>
-  <div class="card">
-    <div class="muted">{{ _("total_income") }}</div>
-    <div class="stat-value amount-positive">{{ "%.2f"|format(total_income) }}</div>
-  </div>
-  <div class="card">
-    <div class="muted">{{ _("net") }}</div>
-    <div class="stat-value {{ 'amount-positive' if (total_income-total_expenses) >= 0 else 'amount-negative' }}">{{ "%.2f"|format(total_income - total_expenses) }}</div>
+<div class="card-grid card-grid-summary">
+  <div class="card budget-equation">
+    <div class="budget-equation-row">
+      <span class="muted">{{ _("total_income") }}</span>
+      <span class="amount-positive">{{ "%.2f"|format(total_income) }}</span>
+    </div>
+    <div class="budget-equation-row">
+      <span class="muted">{{ _("total_expenses") }}</span>
+      <span class="amount-negative">{{ "%.2f"|format(total_expenses) }}</span>
+    </div>
+    <div class="budget-equation-row budget-equation-total">
+      <span>{{ _("net") }}</span>
+      <span class="{{ 'amount-positive' if (total_income-total_expenses) >= 0 else 'amount-negative' }}">{{ "%.2f"|format(total_income - total_expenses) }}</span>
+    </div>
   </div>
   <div class="card card-highlight">
     <div class="muted">{{ _("net_with_carryover") }}</div>
     <div class="stat-value {{ 'amount-positive' if net_with_carryover >= 0 else 'amount-negative' }}">{{ "%.2f"|format(net_with_carryover) }}</div>
     <p class="muted">{{ _("net_with_carryover_hint") }}</p>
-  </div>
-</div>
-
-<div class="card-grid">
-  <div class="card">
-    <div class="muted">{{ _("remaining_validated") }}</div>
-    <div class="stat-value {{ 'amount-positive' if remaining_validated >= 0 else 'amount-negative' }}">{{ "%.2f"|format(remaining_validated) }}</div>
-    <p class="muted">{{ _("remaining_validated_hint") }}</p>
   </div>
   <div class="card">
     <div class="muted">{{ _("remaining_forecast") }}</div>

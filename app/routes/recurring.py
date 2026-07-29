@@ -310,7 +310,6 @@ def monthly_budget(year, month):
         other_txs=other_txs,
         total_expenses=total_expenses,
         total_income=total_income,
-        remaining_validated=remaining_validated,
         remaining_forecast=remaining_forecast,
         active_accounts=active_accounts,
         categories=categories,
