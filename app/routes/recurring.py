@@ -350,10 +350,15 @@ def monthly_budget_chart_data(year, month):
 
     account = Account.query.filter_by(id=account_id, user_id=current_user.id).first() if account_id else None
 
+    # Charted transactions must match the same set the summary cards count for
+    # this month (budget_month), not the real transaction date — otherwise a
+    # budget-shifted transaction (e.g. a salary paid 26/07 but budgeted to
+    # August) would silently vanish from one or the other and the chart's
+    # ending balance would no longer reconcile with "net balance (with
+    # carryover)" + the remaining forecast.
     txs_q = Transaction.query.filter(
         Transaction.user_id == current_user.id,
-        Transaction.date >= start,
-        Transaction.date <= end,
+        Transaction.budget_month == start,
     )
     due_rules_q = RecurringRule.query.filter(
         RecurringRule.user_id == current_user.id,
@@ -369,7 +374,14 @@ def monthly_budget_chart_data(year, month):
     due_rules = due_rules_q.order_by(RecurringRule.next_due_date).all()
 
     events = [
-        {"date": t.date, "amount": float(t.amount), "label": t.description or g._("transaction")}
+        {
+            # clamp to the displayed month for the X axis — its real date may
+            # fall outside this month when budget_month was overridden
+            "date": min(max(t.date, start), end),
+            "amount": float(t.amount),
+            "label": t.description or g._("transaction"),
+            "realized": t.date <= today,
+        }
         for t in txs
     ]
     for r in due_rules:
@@ -393,7 +405,7 @@ def monthly_budget_chart_data(year, month):
             "date": event["date"].isoformat(),
             "balance": round(running_balance, 2),
             "label": event["label"],
-            "realized": event["date"] <= today,
+            "realized": event.get("realized", event["date"] <= today),
         })
 
     # extend the line flat to the end of the month so the X axis always spans
