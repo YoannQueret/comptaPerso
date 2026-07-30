@@ -131,6 +131,7 @@ def create_app():
     from app.routes.main import bp as main_bp
     from app.routes.accounts import bp as accounts_bp
     from app.routes.account_types import bp as account_types_bp
+    from app.routes.currencies import bp as currencies_bp
     from app.routes.categories import bp as categories_bp
     from app.routes.transactions import bp as transactions_bp
     from app.routes.transfers import bp as transfers_bp
@@ -141,6 +142,7 @@ def create_app():
     app.register_blueprint(main_bp)
     app.register_blueprint(accounts_bp)
     app.register_blueprint(account_types_bp)
+    app.register_blueprint(currencies_bp)
     app.register_blueprint(categories_bp)
     app.register_blueprint(transactions_bp)
     app.register_blueprint(transfers_bp)

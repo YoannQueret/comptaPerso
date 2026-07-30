@@ -1,0 +1,47 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="toolbar">
+  <h1>{{ _("currencies") }}</h1>
+  <a class="btn" href="{{ url_for('currencies.new_currency') }}">+ {{ _("add") }}</a>
+</div>
+
+<div class="card">
+  <div class="table-wrap">
+  <table id="currencies-table" class="table-responsive">
+    <thead>
+      <tr><th>{{ _("currency") }}</th><th>{{ _("status") }}</th><th></th></tr>
+    </thead>
+    <tbody>
+      {% for c in currencies %}
+      <tr>
+        <td data-label="{{ _('currency') }}">{{ c.code }}</td>
+        <td data-label="{{ _('status') }}">
+          {% if c.active %}
+          <span class="badge-kind badge-kind-income">{{ _("active") }}</span>
+          {% else %}
+          <span class="badge-kind badge-kind-both">{{ _("inactive") }}</span>
+          {% endif %}
+        </td>
+        <td>
+          {% if not (c.active and c.code in used_codes) %}
+          <form class="inline" method="post" action="{{ url_for('currencies.toggle_currency', currency_id=c.id) }}">
+  <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            <button class="btn btn-sm btn-secondary" type="submit">{{ _("deactivate") if c.active else _("activate") }}</button>
+          </form>
+          {% endif %}
+          {% if c.code not in used_codes %}
+          <form class="inline" method="post" action="{{ url_for('currencies.delete_currency', currency_id=c.id) }}" onsubmit="return confirm('{{ _("confirm_delete_currency") }}');">
+  <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            <button class="btn btn-sm btn-danger" type="submit">{{ _("delete") }}</button>
+          </form>
+          {% endif %}
+        </td>
+      </tr>
+      {% else %}
+      <tr><td colspan="3">{{ _("no_data") }}</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+  </div>
+</div>
+{% endblock %}

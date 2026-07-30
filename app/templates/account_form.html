@@ -23,7 +23,7 @@
         </select>
       </div>
       <div class="form-group">
-        <label>{{ _("currency") }}</label>
+        <label>{{ _("currency") }} (<a href="{{ url_for('currencies.list_currencies') }}">{{ _("edit") }}</a>)</label>
         <select name="currency">
           {% for c in currencies %}
           <option value="{{ c }}" {{ 'selected' if account and account.currency==c else '' }}>{{ c }}</option>

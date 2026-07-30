@@ -1,0 +1,15 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="card" style="max-width:420px;">
+  <h1>{{ _("add") }} — {{ _("currencies") }}</h1>
+  <form method="post">
+  <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+    <div class="form-group">
+      <label>{{ _("currency") }}</label>
+      <input type="text" name="code" maxlength="3" style="text-transform:uppercase;" placeholder="EUR" required autofocus>
+    </div>
+    <button class="btn" type="submit">{{ _("save") }}</button>
+    <a class="btn btn-secondary" href="{{ url_for('currencies.list_currencies') }}">{{ _("cancel") }}</a>
+  </form>
+</div>
+{% endblock %}

@@ -31,6 +31,7 @@ class User(db.Model, UserMixin):
     default_account = db.relationship("Account", foreign_keys=[default_account_id])
     categories = db.relationship("Category", backref="user", cascade="all, delete-orphan")
     account_types = db.relationship("AccountType", backref="user", cascade="all, delete-orphan")
+    currencies = db.relationship("Currency", backref="user", cascade="all, delete-orphan")
 
     def set_password(self, password):
         self.password_hash = generate_password_hash(password)
@@ -44,6 +45,14 @@ class AccountType(db.Model):
     id = db.Column(db.String(36), primary_key=True, default=gen_uuid)
     user_id = db.Column(db.String(36), db.ForeignKey("users.id"), nullable=False, index=True)
     name = db.Column(db.String(60), nullable=False)
+
+
+class Currency(db.Model):
+    __tablename__ = "currencies"
+    id = db.Column(db.String(36), primary_key=True, default=gen_uuid)
+    user_id = db.Column(db.String(36), db.ForeignKey("users.id"), nullable=False, index=True)
+    code = db.Column(db.String(3), nullable=False)
+    active = db.Column(db.Boolean, default=False)
 
 
 class Account(db.Model):

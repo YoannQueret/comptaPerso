@@ -5,7 +5,8 @@ from flask_login import login_user, logout_user, login_required, current_user
 
 from app.extensions import db
 from app.mail import send_email
-from app.models import User, AccountType
+from app.config import Config
+from app.models import User, AccountType, Currency
 from app.translations import DEFAULT_ACCOUNT_TYPE_NAMES
 
 bp = Blueprint("auth", __name__)
@@ -119,6 +120,8 @@ def register():
         db.session.flush()
         for type_name in DEFAULT_ACCOUNT_TYPE_NAMES.get(g.locale, DEFAULT_ACCOUNT_TYPE_NAMES["fr"]):
             db.session.add(AccountType(user_id=user.id, name=type_name))
+        for code in Config.DEFAULT_CURRENCIES:
+            db.session.add(Currency(user_id=user.id, code=code, active=code == "EUR"))
         db.session.commit()
         login_user(user)
         return redirect(url_for("main.dashboard"))

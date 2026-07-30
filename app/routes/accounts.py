@@ -2,8 +2,7 @@ from flask import Blueprint, render_template, redirect, url_for, request, flash,
 from flask_login import login_required, current_user
 
 from app.extensions import db
-from app.models import Account, AccountType
-from app.config import Config
+from app.models import Account, AccountType, Currency
 
 
 bp = Blueprint("accounts", __name__, url_prefix="/accounts")
@@ -11,6 +10,20 @@ bp = Blueprint("accounts", __name__, url_prefix="/accounts")
 
 def _account_types_for_select():
     return AccountType.query.filter_by(user_id=current_user.id).order_by(AccountType.name).all()
+
+
+def _currencies_for_select(current_code=None):
+    """Active currency codes for this user, plus the account's current code (even
+    if since deactivated) so editing an account never hides its own currency."""
+    codes = [
+        c.code
+        for c in Currency.query.filter_by(user_id=current_user.id, active=True)
+        .order_by(Currency.code)
+        .all()
+    ]
+    if current_code and current_code not in codes:
+        codes.append(current_code)
+    return codes
 
 
 @bp.route("/")
@@ -43,7 +56,7 @@ def new_account():
         "account_form.html",
         account=None,
         account_types=_account_types_for_select(),
-        currencies=Config.DEFAULT_CURRENCIES,
+        currencies=_currencies_for_select(),
     )
 
 
@@ -65,7 +78,7 @@ def edit_account(account_id):
         "account_form.html",
         account=acc,
         account_types=_account_types_for_select(),
-        currencies=Config.DEFAULT_CURRENCIES,
+        currencies=_currencies_for_select(acc.currency),
     )
 
 
