@@ -24,30 +24,6 @@ def _parse_budget_month(s, fallback_date):
     return fallback_date.replace(day=1)
 
 
-@bp.route("/")
-@login_required
-def list_transfers():
-    # only show one row per transfer group (the "outgoing" row, negative amount)
-    txs = (
-        Transaction.query.filter_by(user_id=current_user.id, is_transfer=True)
-        .filter(Transaction.amount < 0)
-        .order_by(Transaction.date.desc())
-        .limit(200)
-        .all()
-    )
-    pairs = []
-    for t in txs:
-        dest = Transaction.query.filter_by(
-            transfer_group_id=t.transfer_group_id, is_transfer=True
-        ).filter(Transaction.id != t.id).first()
-        pairs.append((t, dest))
-
-    accounts = Account.query.filter_by(user_id=current_user.id, active=True).order_by(
-        Account.name
-    ).all()
-    return render_template("transfers.html", pairs=pairs, accounts=accounts, today=date.today())
-
-
 @bp.route("/new", methods=["GET", "POST"])
 @login_required
 def new_transfer():
@@ -100,7 +76,7 @@ def new_transfer():
         db.session.add_all([out_tx, in_tx])
         db.session.commit()
         flash(g._("transfer_saved"), "success")
-        return redirect(next_url or url_for("transfers.list_transfers"))
+        return redirect(next_url or url_for("transactions.list_transactions"))
 
     return render_template(
         "transfer_form.html",
@@ -157,7 +133,7 @@ def edit_transfer(group_id):
 
         db.session.commit()
         flash(g._("transfer_updated"), "success")
-        return redirect(next_url or url_for("transfers.list_transfers"))
+        return redirect(next_url or url_for("transactions.list_transactions"))
 
     return render_template(
         "transfer_form.html",
@@ -176,4 +152,5 @@ def delete_transfer(group_id):
     ).delete()
     db.session.commit()
     flash(g._("transfer_deleted"), "success")
-    return redirect(url_for("transfers.list_transfers"))
+    next_url = safe_next(request.form.get("next"))
+    return redirect(next_url or url_for("transactions.list_transactions"))

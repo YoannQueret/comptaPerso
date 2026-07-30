@@ -25,21 +25,37 @@ def month_bounds(year: int, month: int):
 
 def resolve_account_id(user, requested_account_id):
     """Return a valid account_id belonging to the user: the requested one if valid,
-    otherwise the default account, otherwise the first account alphabetically."""
+    otherwise the last one selected this session, otherwise the default account,
+    otherwise the first account alphabetically. Whichever account is resolved is
+    remembered in the session, so navigating between pages without an explicit
+    ?account_id= keeps showing the same account instead of resetting to the
+    default every time."""
+    from flask import session
     from app.models import Account
 
     if requested_account_id:
         acc = Account.query.filter_by(id=requested_account_id, user_id=user.id).first()
+        if acc:
+            session["selected_account_id"] = acc.id
+            return acc.id
+
+    remembered_id = session.get("selected_account_id")
+    if remembered_id:
+        acc = Account.query.filter_by(id=remembered_id, user_id=user.id).first()
         if acc:
             return acc.id
 
     if user.default_account_id:
         acc = Account.query.filter_by(id=user.default_account_id, user_id=user.id).first()
         if acc:
+            session["selected_account_id"] = acc.id
             return acc.id
 
     fallback = Account.query.filter_by(user_id=user.id).order_by(Account.name).first()
-    return fallback.id if fallback else None
+    if fallback:
+        session["selected_account_id"] = fallback.id
+        return fallback.id
+    return None
 
 
 def safe_next(url):

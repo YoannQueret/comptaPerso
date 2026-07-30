@@ -15,7 +15,6 @@
   <label for="nav-toggle" class="nav-toggle-label" aria-label="Menu">☰</label>
   <div class="navbar-links">
     <a href="{{ url_for('transactions.list_transactions') }}">{{ _("transactions") }}</a>
-    <a href="{{ url_for('transfers.list_transfers') }}">{{ _("transfers") }}</a>
     <a href="{{ url_for('recurring.monthly_budget', year=now.year, month=now.month) }}">{{ _("monthly_budget") }}</a>
     <a href="{{ url_for('reports.index') }}">{{ _("reports") }}</a>
     <details class="navbar-dropdown">

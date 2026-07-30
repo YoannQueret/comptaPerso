@@ -48,7 +48,7 @@
       <input type="text" name="description" value="{{ out_tx.description if out_tx else '' }}" placeholder="{{ _('transfer') }}">
     </div>
     <button class="btn" type="submit">{{ _("save") }}</button>
-    <a class="btn btn-secondary" href="{{ next_url or url_for('transfers.list_transfers') }}">{{ _("cancel") }}</a>
+    <a class="btn btn-secondary" href="{{ next_url or url_for('transactions.list_transactions') }}">{{ _("cancel") }}</a>
   </form>
 </div>
 
