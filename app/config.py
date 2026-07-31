@@ -36,6 +36,12 @@ class Config:
 
     SQLALCHEMY_TRACK_MODIFICATIONS = False
 
+    # Forces the browser to always revalidate static files (JS/CSS) instead of
+    # trusting its own heuristic cache lifetime — otherwise a browser can keep
+    # serving a stale script for a long time after a deploy, with no way to
+    # know it changed short of the user manually clearing their cache.
+    SEND_FILE_MAX_AGE_DEFAULT = 0
+
     # Allows disabling the automatic schema upgrade at startup
     # (useful for the `flask db ...` commands themselves, or for troubleshooting).
     SKIP_DB_UPGRADE = os.environ.get("SKIP_DB_UPGRADE", "").lower() in ("1", "true", "yes")

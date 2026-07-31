@@ -5,6 +5,16 @@ All notable changes to this project are documented in this file.
 The format loosely follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 Versions are tracked in the `VERSION` file at the repo root.
 
+## [0.3.1] - 2026-07-31
+
+### Fixed
+- Static files (JS/CSS) are now served with `Cache-Control: no-cache, max-age=0`,
+  forcing the browser to always revalidate against the server (a cheap
+  conditional request, 304 if unchanged) instead of trusting its own
+  heuristic cache lifetime. Some browsers (Chrome on Android in particular)
+  could otherwise keep serving a stale script long after a deploy, with no
+  way to recover short of the user manually clearing their cache.
+
 ## [0.3.0] - 2026-07-30
 
 ### Added
