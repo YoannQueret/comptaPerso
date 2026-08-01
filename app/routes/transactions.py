@@ -102,6 +102,7 @@ def list_transactions():
         Account.name
     ).all()
     categories = ordered_categories(current_user.id)
+    selected_account = next((a for a in accounts if a.id == account_id), None)
 
     return render_template(
         "transactions.html",
@@ -114,6 +115,7 @@ def list_transactions():
         sort=sort,
         today=date.today(),
         selected_account_id=account_id,
+        selected_account=selected_account,
     )
 
 

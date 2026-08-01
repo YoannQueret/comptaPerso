@@ -10,13 +10,19 @@
 
 <div class="card">
   <form method="get" class="form-row">
-    <div class="form-group">
+    <div class="form-group" style="position:relative;">
       <label>{{ _("account") }}</label>
       <select name="account_id" onchange="this.form.submit()">
         {% for acc in accounts %}
         <option value="{{ acc.id }}" {{ 'selected' if selected_account_id==acc.id else '' }}>{{ acc.name }} ({{ acc.currency }})</option>
         {% endfor %}
       </select>
+      {% if selected_account %}
+      <div class="muted" style="position:absolute;top:100%;left:0;margin-top:0.3rem;white-space:nowrap;">
+        {{ _("balance") }}:
+        <strong class="{{ 'amount-positive' if selected_account.balance >= 0 else 'amount-negative' }}">{{ "%.2f"|format(selected_account.balance) }} {{ selected_account.currency }}</strong>
+      </div>
+      {% endif %}
     </div>
     <div class="form-group">
       <label>{{ _("category") }}</label>

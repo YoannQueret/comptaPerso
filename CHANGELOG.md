@@ -5,6 +5,12 @@ All notable changes to this project are documented in this file.
 The format loosely follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 Versions are tracked in the `VERSION` file at the repo root.
 
+## [0.3.2] - 2026-08-01
+
+### Added
+- The transactions page now shows the selected account's real balance,
+  right under the account filter dropdown.
+
 ## [0.3.1] - 2026-07-31
 
 ### Fixed
