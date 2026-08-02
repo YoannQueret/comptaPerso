@@ -5,6 +5,27 @@ All notable changes to this project are documented in this file.
 The format loosely follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 Versions are tracked in the `VERSION` file at the repo root.
 
+## [0.3.3] - 2026-08-02
+
+### Added
+- Administrator role: the first account ever created becomes an admin. Admins
+  get an "Administration" menu (top right, next to Settings) with a user list
+  showing each account's role and last login, but not their financial data.
+- Admins can promote/demote other accounts to admin (at least one admin must
+  always remain, and you can't remove your own admin rights), delete a user
+  account (cascades their data, can't delete yourself), and deactivate/
+  reactivate an account without deleting it — a deactivated user is signed
+  out immediately and can't log back in until reactivated.
+- Admins can invite new users by email even when self-service registration is
+  disabled, using the same expiring signed-link mechanism as password reset.
+- On the transactions page, filtering by a parent category now also includes
+  transactions filed under its child categories.
+
+### Changed
+- The mobile navigation menu now opens as a proper overlay panel (card
+  background, shadow, larger touch targets) instead of a plain stack of
+  small links.
+
 ## [0.3.2] - 2026-08-01
 
 ### Added

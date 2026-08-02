@@ -4,7 +4,7 @@ import os
 import shutil
 from datetime import datetime
 
-from flask import Flask, session, g, render_template
+from flask import Flask, session, g, render_template, redirect, url_for, flash
 from flask_wtf import CSRFProtect
 from flask_migrate import upgrade as migrate_upgrade
 
@@ -100,16 +100,23 @@ def create_app():
 
     @app.before_request
     def set_locale():
+        from flask_login import current_user
+
         locale = session.get("locale")
         if not locale:
-            from flask_login import current_user
-
             if current_user.is_authenticated:
                 locale = current_user.locale
             else:
                 locale = Config.DEFAULT_LOCALE
         g.locale = locale
         g._ = get_translator(locale)
+
+        if current_user.is_authenticated and not current_user.active:
+            from flask_login import logout_user
+
+            logout_user()
+            flash(g._("auth_account_disabled"), "danger")
+            return redirect(url_for("auth.login"))
 
     @app.errorhandler(404)
     def page_not_found(error):
@@ -137,6 +144,7 @@ def create_app():
     from app.routes.transfers import bp as transfers_bp
     from app.routes.recurring import bp as recurring_bp
     from app.routes.reports import bp as reports_bp
+    from app.routes.admin import bp as admin_bp
 
     app.register_blueprint(auth_bp)
     app.register_blueprint(main_bp)
@@ -147,6 +155,7 @@ def create_app():
     app.register_blueprint(transactions_bp)
     app.register_blueprint(transfers_bp)
     app.register_blueprint(recurring_bp)
+    app.register_blueprint(admin_bp)
     app.register_blueprint(reports_bp)
 
     return app

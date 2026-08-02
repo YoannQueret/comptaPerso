@@ -24,6 +24,9 @@ class User(db.Model, UserMixin):
         nullable=True,
     )
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    last_login_at = db.Column(db.DateTime, nullable=True)
+    active = db.Column(db.Boolean, default=True)
+    is_admin = db.Column(db.Boolean, default=False)
 
     accounts = db.relationship(
         "Account", backref="user", cascade="all, delete-orphan", foreign_keys="Account.user_id"

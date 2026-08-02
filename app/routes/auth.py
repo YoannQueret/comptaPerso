@@ -1,3 +1,5 @@
+from datetime import datetime
+
 from itsdangerous import URLSafeTimedSerializer, BadSignature, SignatureExpired
 
 from flask import Blueprint, render_template, redirect, url_for, flash, request, session, g, current_app
@@ -12,6 +14,7 @@ from app.translations import DEFAULT_ACCOUNT_TYPE_NAMES
 bp = Blueprint("auth", __name__)
 
 RESET_TOKEN_SALT = "password-reset"
+INVITE_TOKEN_SALT = "user-invite"
 
 
 def _reset_serializer():
@@ -32,6 +35,33 @@ def verify_reset_token(token):
     return data.get("user_id")
 
 
+def _invite_serializer():
+    return URLSafeTimedSerializer(current_app.config["SECRET_KEY"], salt=INVITE_TOKEN_SALT)
+
+
+def generate_invite_token(email):
+    return _invite_serializer().dumps({"email": email})
+
+
+def verify_invite_token(token):
+    try:
+        data = _invite_serializer().loads(
+            token, max_age=current_app.config["INVITE_TOKEN_MAX_AGE"]
+        )
+    except (BadSignature, SignatureExpired):
+        return None
+    return data.get("email")
+
+
+def seed_new_user_defaults(user):
+    """Default AccountType/Currency rows every new user starts with, whether
+    they came from self-registration or an admin invite."""
+    for type_name in DEFAULT_ACCOUNT_TYPE_NAMES.get(user.locale, DEFAULT_ACCOUNT_TYPE_NAMES["fr"]):
+        db.session.add(AccountType(user_id=user.id, name=type_name))
+    for code in Config.DEFAULT_CURRENCIES:
+        db.session.add(Currency(user_id=user.id, code=code, active=code == "EUR"))
+
+
 @bp.route("/login", methods=["GET", "POST"])
 def login():
     if current_user.is_authenticated:
@@ -41,6 +71,11 @@ def login():
         password = request.form.get("password", "")
         user = User.query.filter_by(email=email).first()
         if user and user.check_password(password):
+            if not user.active:
+                flash(g._("auth_account_disabled"), "danger")
+                return render_template("login.html")
+            user.last_login_at = datetime.utcnow()
+            db.session.commit()
             login_user(user)
             return redirect(url_for("main.dashboard"))
         flash(g._("auth_invalid_credentials"), "danger")
@@ -114,18 +149,53 @@ def register():
         if User.query.filter_by(email=email).first():
             flash(g._("auth_email_already_used"), "danger")
             return render_template("register.html")
-        user = User(email=email, name=name, locale=g.locale)
+        is_first_user = User.query.count() == 0
+        user = User(email=email, name=name, locale=g.locale, is_admin=is_first_user)
         user.set_password(password)
         db.session.add(user)
         db.session.flush()
-        for type_name in DEFAULT_ACCOUNT_TYPE_NAMES.get(g.locale, DEFAULT_ACCOUNT_TYPE_NAMES["fr"]):
-            db.session.add(AccountType(user_id=user.id, name=type_name))
-        for code in Config.DEFAULT_CURRENCIES:
-            db.session.add(Currency(user_id=user.id, code=code, active=code == "EUR"))
+        seed_new_user_defaults(user)
+        user.last_login_at = datetime.utcnow()
         db.session.commit()
         login_user(user)
         return redirect(url_for("main.dashboard"))
     return render_template("register.html")
+
+
+@bp.route("/accept-invite/<token>", methods=["GET", "POST"])
+def accept_invite(token):
+    if current_user.is_authenticated:
+        return redirect(url_for("main.dashboard"))
+
+    email = verify_invite_token(token)
+    if not email:
+        flash(g._("invite_link_invalid"), "danger")
+        return redirect(url_for("auth.login"))
+
+    if User.query.filter_by(email=email).first():
+        flash(g._("auth_email_already_used"), "danger")
+        return redirect(url_for("auth.login"))
+
+    if request.method == "POST":
+        name = request.form.get("name", "").strip()
+        password = request.form.get("password", "")
+        if not name or not password:
+            flash(g._("auth_all_fields_required"), "danger")
+            return render_template("accept_invite.html", token=token, email=email)
+        if len(password) < 6:
+            flash(g._("auth_password_too_short"), "danger")
+            return render_template("accept_invite.html", token=token, email=email)
+        user = User(email=email, name=name, locale=g.locale, is_admin=False)
+        user.set_password(password)
+        db.session.add(user)
+        db.session.flush()
+        seed_new_user_defaults(user)
+        user.last_login_at = datetime.utcnow()
+        db.session.commit()
+        login_user(user)
+        return redirect(url_for("main.dashboard"))
+
+    return render_template("accept_invite.html", token=token, email=email)
 
 
 @bp.route("/change-password", methods=["GET", "POST"])

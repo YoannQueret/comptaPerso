@@ -69,6 +69,9 @@ class Config:
     # How long a password reset link stays valid, in seconds.
     PASSWORD_RESET_TOKEN_MAX_AGE = int(os.environ.get("PASSWORD_RESET_TOKEN_MAX_AGE", "3600"))
 
+    # How long an admin's invite link stays valid, in seconds (default 7 days).
+    INVITE_TOKEN_MAX_AGE = int(os.environ.get("INVITE_TOKEN_MAX_AGE", str(7 * 24 * 3600)))
+
     # Default supported currencies (short list, extensible)
     DEFAULT_CURRENCIES = ["EUR", "CHF", "USD", "GBP"]
 

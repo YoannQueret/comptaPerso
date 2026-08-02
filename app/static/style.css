@@ -74,6 +74,7 @@ body {
 .navbar-dropdown-menu a:hover { background: var(--bg); color: var(--primary); }
 
 .navbar-dropdown-right .navbar-dropdown-menu { left: auto; right: 0; }
+.navbar-menu { display: contents; }
 .active-lang { font-weight: 700; color: var(--primary) !important; }
 
 .nav-toggle-checkbox { display: none; }
@@ -330,33 +331,61 @@ form.inline { display: inline; }
 .month-picker-cell.month-picker-selected { background: var(--primary); color: #fff; }
 
 @media (max-width: 780px) {
-  .nav-toggle-label { display: block; }
+  .nav-toggle-label { display: block; font-size: 1.6rem; }
+
+  .navbar { position: relative; }
+
+  .navbar-menu {
+    display: none;
+    position: absolute;
+    top: 100%;
+    left: 0;
+    right: 0;
+    flex-direction: column;
+    background: var(--card-bg);
+    border-top: 1px solid var(--border);
+    box-shadow: 0 12px 24px rgba(0, 0, 0, 0.15);
+    padding: 0.5rem;
+    max-height: calc(100vh - 60px);
+    overflow-y: auto;
+    z-index: 200;
+  }
+  .nav-toggle-checkbox:checked ~ .navbar-menu { display: flex; }
 
   .navbar-links, .navbar-right {
-    display: none;
-    flex-basis: 100%;
+    display: flex;
     flex-direction: column;
-    align-items: flex-start;
-    gap: 0.75rem;
-    order: 3;
+    align-items: stretch;
+    gap: 0.15rem;
+    width: 100%;
   }
   .navbar-right {
-    order: 4;
     border-top: 1px solid var(--border);
-    padding-top: 0.75rem;
-    margin-top: 0.25rem;
+    padding-top: 0.5rem;
+    margin-top: 0.5rem;
   }
-  .nav-toggle-checkbox:checked ~ .navbar-links,
-  .nav-toggle-checkbox:checked ~ .navbar-right {
-    display: flex;
+
+  .navbar-links a, .navbar-right a, .navbar-dropdown summary {
+    display: block;
+    padding: 0.85rem 0.6rem;
+    font-size: 1.05rem;
+    border-radius: 8px;
+  }
+  .navbar-links a:active, .navbar-right a:active, .navbar-dropdown summary:active {
+    background: var(--bg);
   }
 
   .navbar-dropdown-menu {
     position: static;
     box-shadow: none;
     border: none;
-    padding: 0 0 0 0.75rem;
-    margin-top: 0.5rem;
+    border-left: 2px solid var(--border);
+    margin: 0.1rem 0 0.35rem 1rem;
+    padding: 0.1rem 0 0.1rem 0.75rem;
+  }
+  .navbar-dropdown-menu a {
+    padding: 0.7rem 0.5rem;
+    font-size: 1rem;
   }
 }
 

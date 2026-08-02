@@ -1,0 +1,75 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="toolbar">
+  <h1>{{ _("admin_users") }}</h1>
+</div>
+
+<div class="card">
+  <form method="post" action="{{ url_for('admin.invite_user') }}" class="form-row">
+  <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+    <div class="form-group">
+      <label>{{ _("invite_email") }}</label>
+      <input type="email" name="email" placeholder="email@example.com" required>
+    </div>
+    <div class="form-group" style="align-self:flex-end;">
+      <button class="btn" type="submit">{{ _("invite_send") }}</button>
+    </div>
+  </form>
+</div>
+
+<div class="card">
+  <div class="table-wrap">
+  <table id="admin-users-table" class="table-responsive">
+    <thead>
+      <tr>
+        <th>{{ _("email") }}</th><th>{{ _("name") }}</th><th>{{ _("role") }}</th><th>{{ _("status") }}</th><th>{{ _("last_login") }}</th><th>{{ _("created_at") }}</th><th></th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for u in users %}
+      <tr>
+        <td data-label="{{ _('email') }}">{{ u.email }}</td>
+        <td data-label="{{ _('name') }}">{{ u.name }}</td>
+        <td data-label="{{ _('role') }}">
+          {% if u.is_admin %}
+          <span class="badge-kind badge-kind-income">{{ _("administrator") }}</span>
+          {% else %}
+          <span class="badge-kind badge-kind-both">{{ _("regular_user") }}</span>
+          {% endif %}
+        </td>
+        <td data-label="{{ _('status') }}">
+          {% if u.active %}
+          <span class="badge-kind badge-kind-income">{{ _("active") }}</span>
+          {% else %}
+          <span class="badge-kind badge-kind-both">{{ _("inactive") }}</span>
+          {% endif %}
+        </td>
+        <td data-label="{{ _('last_login') }}">{{ u.last_login_at.strftime('%d/%m/%Y %H:%M') if u.last_login_at else '—' }}</td>
+        <td data-label="{{ _('created_at') }}">{{ u.created_at.strftime('%d/%m/%Y') if u.created_at else '—' }}</td>
+        <td>
+          {% if u.id != current_user.id %}
+          <form class="inline" method="post" action="{{ url_for('admin.toggle_admin', user_id=u.id) }}">
+  <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            <button class="btn btn-sm btn-secondary" type="submit">{{ _("demote_admin") if u.is_admin else _("promote_admin") }}</button>
+          </form>
+          <form class="inline" method="post" action="{{ url_for('admin.toggle_active', user_id=u.id) }}" {% if u.active %}onsubmit="return confirm('{{ _("confirm_deactivate_user") }}');"{% endif %}>
+  <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            <button class="btn btn-sm btn-secondary" type="submit">{{ _("activate") if not u.active else _("deactivate") }}</button>
+          </form>
+          <form class="inline" method="post" action="{{ url_for('admin.delete_user', user_id=u.id) }}" onsubmit="return confirm('{{ _("confirm_delete_user") }}');">
+  <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            <button class="btn btn-sm btn-danger" type="submit">{{ _("delete") }}</button>
+          </form>
+          {% else %}
+          <span class="muted">{{ _("thats_you") }}</span>
+          {% endif %}
+        </td>
+      </tr>
+      {% else %}
+      <tr><td colspan="7">{{ _("no_data") }}</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+  </div>
+</div>
+{% endblock %}

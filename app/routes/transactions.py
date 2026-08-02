@@ -10,7 +10,7 @@ from flask import (
 from flask_login import login_required, current_user
 
 from app.extensions import db
-from app.models import Transaction, Account
+from app.models import Transaction, Account, Category
 from app.utils import resolve_account_id, ordered_categories, safe_next as _safe_next
 
 bp = Blueprint("transactions", __name__, url_prefix="/transactions")
@@ -70,7 +70,10 @@ def list_transactions():
     if account_id:
         q = q.filter(Transaction.account_id == account_id)
     if category_id:
-        q = q.filter(Transaction.category_id == category_id)
+        category = Category.query.filter_by(id=category_id, user_id=current_user.id).first()
+        if category:
+            category_ids = [category.id] + [child.id for child in category.children]
+            q = q.filter(Transaction.category_id.in_(category_ids))
     if date_from:
         q = q.filter(Transaction.date >= date_from)
     if date_to:

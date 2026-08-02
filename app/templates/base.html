@@ -13,6 +13,7 @@
   <a class="navbar-brand" href="{{ url_for('main.dashboard') }}">comptaPerso</a>
   <input type="checkbox" id="nav-toggle" class="nav-toggle-checkbox">
   <label for="nav-toggle" class="nav-toggle-label" aria-label="Menu">☰</label>
+  <div class="navbar-menu">
   <div class="navbar-links">
     <a href="{{ url_for('transactions.list_transactions') }}">{{ _("transactions") }}</a>
     <a href="{{ url_for('recurring.monthly_budget', year=now.year, month=now.month) }}">{{ _("monthly_budget") }}</a>
@@ -27,6 +28,14 @@
         <a href="{{ url_for('recurring.list_recurring') }}">{{ _("recurring") }}</a>
       </div>
     </details>
+    {% if current_user.is_admin %}
+    <details class="navbar-dropdown">
+      <summary>{{ _("admin") }}</summary>
+      <div class="navbar-dropdown-menu">
+        <a href="{{ url_for('admin.list_users') }}">{{ _("admin_users") }}</a>
+      </div>
+    </details>
+    {% endif %}
   </div>
   <div class="navbar-right">
     <a href="{{ url_for('auth.set_locale', lang='fr') }}" class="{{ 'active-lang' if locale=='fr' else '' }}">FR</a>
@@ -38,6 +47,7 @@
         <a href="{{ url_for('auth.logout') }}">{{ _("logout") }}</a>
       </div>
     </details>
+  </div>
   </div>
 </nav>
 {% endif %}
