@@ -121,7 +121,10 @@ exports the variables into your shell before `run.py` starts.)
 - `DB_ENGINE` — `sqlite` (default) or `mariadb`.
 - `DATA_DIR` — SQLite data directory (default `./data`).
 - `ALLOW_REGISTRATION` — set to `false` to disable self-service sign-up once your
-  users are set up (default: enabled).
+  users are set up (default: enabled). The very first account ever created on
+  an install automatically gets administrator rights, regardless of this
+  setting — admins can still invite new users by email from the "Administration"
+  menu even when self-service registration is disabled.
 - `PORT` — port the app listens on (default `5000`). Used by `python run.py`
   directly, and by the Docker entrypoint (gunicorn) and the `ports:` mapping in
   `docker-compose*.yml`.

@@ -1,0 +1,60 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="toolbar">
+  <h1>{{ _("admin_invitations") }}</h1>
+</div>
+
+<div class="card">
+  <form method="post" action="{{ url_for('admin.invite_user') }}" class="form-row">
+  <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+    <div class="form-group">
+      <label>{{ _("invite_email") }}</label>
+      <input type="email" name="email" placeholder="email@example.com" required>
+    </div>
+    <div class="form-group" style="align-self:flex-end;">
+      <button class="btn" type="submit">{{ _("invite_send") }}</button>
+    </div>
+  </form>
+</div>
+
+<div class="card">
+  <div class="table-wrap">
+  <table id="admin-invitations-table" class="table-responsive">
+    <thead>
+      <tr>
+        <th>{{ _("email") }}</th><th>{{ _("invite_sent_at") }}</th><th>{{ _("invite_expires_at") }}</th><th>{{ _("invite_status") }}</th><th></th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for row in rows %}
+      {% set inv = row.invitation %}
+      <tr>
+        <td data-label="{{ _('email') }}">{{ inv.email }}</td>
+        <td data-label="{{ _('invite_sent_at') }}">{{ inv.created_at.strftime('%d/%m/%Y %H:%M') if inv.created_at else '—' }}</td>
+        <td data-label="{{ _('invite_expires_at') }}">{{ row.expires_at.strftime('%d/%m/%Y %H:%M') }}</td>
+        <td data-label="{{ _('invite_status') }}">
+          {% if inv.accepted_at %}
+          <span class="badge-kind badge-kind-income">{{ _("invite_status_accepted") }} — {{ inv.accepted_at.strftime('%d/%m/%Y') }}</span>
+          {% elif row.expired %}
+          <span class="badge-kind badge-kind-expense">{{ _("invite_status_expired") }}</span>
+          {% else %}
+          <span class="badge-kind badge-kind-both">{{ _("invite_status_pending") }}</span>
+          {% endif %}
+        </td>
+        <td>
+          {% if not inv.accepted_at %}
+          <form class="inline" method="post" action="{{ url_for('admin.resend_invitation', invitation_id=inv.id) }}">
+  <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            <button class="btn btn-sm btn-secondary" type="submit">{{ _("invite_resend") }}</button>
+          </form>
+          {% endif %}
+        </td>
+      </tr>
+      {% else %}
+      <tr><td colspan="5">{{ _("no_data") }}</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+  </div>
+</div>
+{% endblock %}

@@ -1,3 +1,4 @@
+from datetime import datetime, timedelta
 from functools import wraps
 
 from flask import Blueprint, render_template, redirect, url_for, request, flash, g, current_app
@@ -5,7 +6,7 @@ from flask_login import login_required, current_user
 
 from app.extensions import db
 from app.mail import send_email
-from app.models import User
+from app.models import User, Invitation
 from app.routes.auth import generate_invite_token
 
 bp = Blueprint("admin", __name__, url_prefix="/admin")
@@ -33,18 +34,25 @@ def list_users():
     return render_template("admin_users.html", users=users)
 
 
-@bp.route("/invite", methods=["POST"])
+@bp.route("/invitations")
 @login_required
 @admin_required
-def invite_user():
-    email = request.form.get("email", "").strip().lower()
-    if not email:
-        flash(g._("auth_all_fields_required"), "danger")
-        return redirect(url_for("admin.list_users"))
-    if User.query.filter_by(email=email).first():
-        flash(g._("auth_email_already_used"), "danger")
-        return redirect(url_for("admin.list_users"))
+def list_invitations():
+    invitations = Invitation.query.order_by(Invitation.created_at.desc()).all()
+    max_age = current_app.config["INVITE_TOKEN_MAX_AGE"]
+    now = datetime.utcnow()
+    rows = [
+        {
+            "invitation": inv,
+            "expires_at": inv.created_at + timedelta(seconds=max_age),
+            "expired": not inv.accepted_at and inv.created_at + timedelta(seconds=max_age) < now,
+        }
+        for inv in invitations
+    ]
+    return render_template("admin_invitations.html", rows=rows)
 
+
+def _send_invite_email(email):
     token = generate_invite_token(email)
     invite_url = url_for("auth.accept_invite", token=token, _external=True)
     send_email(
@@ -52,8 +60,42 @@ def invite_user():
         g._("invite_email_subject"),
         g._("invite_email_body") % {"url": invite_url, "inviter": current_user.name},
     )
+
+
+@bp.route("/invite", methods=["POST"])
+@login_required
+@admin_required
+def invite_user():
+    email = request.form.get("email", "").strip().lower()
+    if not email:
+        flash(g._("auth_all_fields_required"), "danger")
+        return redirect(url_for("admin.list_invitations"))
+    if User.query.filter_by(email=email).first():
+        flash(g._("auth_email_already_used"), "danger")
+        return redirect(url_for("admin.list_invitations"))
+
+    _send_invite_email(email)
+    db.session.add(Invitation(email=email, invited_by_id=current_user.id))
+    db.session.commit()
     flash(g._("invite_sent"), "success")
-    return redirect(url_for("admin.list_users"))
+    return redirect(url_for("admin.list_invitations"))
+
+
+@bp.route("/invitations/<invitation_id>/resend", methods=["POST"])
+@login_required
+@admin_required
+def resend_invitation(invitation_id):
+    invitation = Invitation.query.filter_by(id=invitation_id).first_or_404()
+    if invitation.accepted_at:
+        flash(g._("invite_already_accepted"), "danger")
+        return redirect(url_for("admin.list_invitations"))
+
+    _send_invite_email(invitation.email)
+    # a resend issues a brand new token, so the invitation's clock restarts too
+    invitation.created_at = datetime.utcnow()
+    db.session.commit()
+    flash(g._("invite_resent"), "success")
+    return redirect(url_for("admin.list_invitations"))
 
 
 @bp.route("/<user_id>/toggle-admin", methods=["POST"])

@@ -2,7 +2,7 @@ import glob
 import logging
 import os
 import shutil
-from datetime import datetime
+from datetime import datetime, timedelta
 
 from flask import Flask, session, g, render_template, redirect, url_for, flash
 from flask_wtf import CSRFProtect
@@ -117,6 +117,14 @@ def create_app():
             logout_user()
             flash(g._("auth_account_disabled"), "danger")
             return redirect(url_for("auth.login"))
+
+        if current_user.is_authenticated:
+            now = datetime.utcnow()
+            # throttled to one write per minute per user, so every request
+            # doesn't trigger a commit just to bump this timestamp
+            if not current_user.last_seen_at or now - current_user.last_seen_at > timedelta(minutes=1):
+                current_user.last_seen_at = now
+                db.session.commit()
 
     @app.errorhandler(404)
     def page_not_found(error):

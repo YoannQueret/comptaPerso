@@ -33,6 +33,7 @@
       <summary>{{ _("admin") }}</summary>
       <div class="navbar-dropdown-menu">
         <a href="{{ url_for('admin.list_users') }}">{{ _("admin_users") }}</a>
+        <a href="{{ url_for('admin.list_invitations') }}">{{ _("admin_invitations") }}</a>
       </div>
     </details>
     {% endif %}

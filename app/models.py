@@ -25,6 +25,7 @@ class User(db.Model, UserMixin):
     )
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     last_login_at = db.Column(db.DateTime, nullable=True)
+    last_seen_at = db.Column(db.DateTime, nullable=True)
     active = db.Column(db.Boolean, default=True)
     is_admin = db.Column(db.Boolean, default=False)
 
@@ -35,6 +36,12 @@ class User(db.Model, UserMixin):
     categories = db.relationship("Category", backref="user", cascade="all, delete-orphan")
     account_types = db.relationship("AccountType", backref="user", cascade="all, delete-orphan")
     currencies = db.relationship("Currency", backref="user", cascade="all, delete-orphan")
+    sent_invitations = db.relationship(
+        "Invitation",
+        backref="invited_by",
+        cascade="all, delete-orphan",
+        foreign_keys="Invitation.invited_by_id",
+    )
 
     def set_password(self, password):
         self.password_hash = generate_password_hash(password)
@@ -166,3 +173,16 @@ class RecurringRule(db.Model):
     to_account = db.relationship("Account", foreign_keys=[to_account_id])
     category = db.relationship("Category")
     occurrences = db.relationship("Transaction", backref="recurring_rule")
+
+
+class Invitation(db.Model):
+    """A log of invite emails sent by an admin. The token itself stays a
+    stateless signed value (see auth.generate_invite_token) — this table only
+    exists so admins can see what was sent, not to validate the token."""
+
+    __tablename__ = "invitations"
+    id = db.Column(db.String(36), primary_key=True, default=gen_uuid)
+    email = db.Column(db.String(255), nullable=False, index=True)
+    invited_by_id = db.Column(db.String(36), db.ForeignKey("users.id"), nullable=False, index=True)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    accepted_at = db.Column(db.DateTime, nullable=True)

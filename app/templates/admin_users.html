@@ -5,24 +5,11 @@
 </div>
 
 <div class="card">
-  <form method="post" action="{{ url_for('admin.invite_user') }}" class="form-row">
-  <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-    <div class="form-group">
-      <label>{{ _("invite_email") }}</label>
-      <input type="email" name="email" placeholder="email@example.com" required>
-    </div>
-    <div class="form-group" style="align-self:flex-end;">
-      <button class="btn" type="submit">{{ _("invite_send") }}</button>
-    </div>
-  </form>
-</div>
-
-<div class="card">
   <div class="table-wrap">
   <table id="admin-users-table" class="table-responsive">
     <thead>
       <tr>
-        <th>{{ _("email") }}</th><th>{{ _("name") }}</th><th>{{ _("role") }}</th><th>{{ _("status") }}</th><th>{{ _("last_login") }}</th><th>{{ _("created_at") }}</th><th></th>
+        <th>{{ _("email") }}</th><th>{{ _("name") }}</th><th>{{ _("role") }}</th><th>{{ _("status") }}</th><th>{{ _("last_login") }}</th><th>{{ _("last_seen") }}</th><th>{{ _("created_at") }}</th><th></th>
       </tr>
     </thead>
     <tbody>
@@ -45,6 +32,7 @@
           {% endif %}
         </td>
         <td data-label="{{ _('last_login') }}">{{ u.last_login_at.strftime('%d/%m/%Y %H:%M') if u.last_login_at else '—' }}</td>
+        <td data-label="{{ _('last_seen') }}">{{ u.last_seen_at.strftime('%d/%m/%Y %H:%M') if u.last_seen_at else '—' }}</td>
         <td data-label="{{ _('created_at') }}">{{ u.created_at.strftime('%d/%m/%Y') if u.created_at else '—' }}</td>
         <td>
           {% if u.id != current_user.id %}
@@ -66,7 +54,7 @@
         </td>
       </tr>
       {% else %}
-      <tr><td colspan="7">{{ _("no_data") }}</td></tr>
+      <tr><td colspan="8">{{ _("no_data") }}</td></tr>
       {% endfor %}
     </tbody>
   </table>

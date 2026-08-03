@@ -8,7 +8,7 @@ from flask_login import login_user, logout_user, login_required, current_user
 from app.extensions import db
 from app.mail import send_email
 from app.config import Config
-from app.models import User, AccountType, Currency
+from app.models import User, AccountType, Currency, Invitation
 from app.translations import DEFAULT_ACCOUNT_TYPE_NAMES
 
 bp = Blueprint("auth", __name__)
@@ -156,6 +156,9 @@ def register():
         db.session.flush()
         seed_new_user_defaults(user)
         user.last_login_at = datetime.utcnow()
+        Invitation.query.filter_by(email=email, accepted_at=None).update(
+            {"accepted_at": datetime.utcnow()}
+        )
         db.session.commit()
         login_user(user)
         return redirect(url_for("main.dashboard"))
@@ -191,6 +194,9 @@ def accept_invite(token):
         db.session.flush()
         seed_new_user_defaults(user)
         user.last_login_at = datetime.utcnow()
+        Invitation.query.filter_by(email=email, accepted_at=None).update(
+            {"accepted_at": datetime.utcnow()}
+        )
         db.session.commit()
         login_user(user)
         return redirect(url_for("main.dashboard"))
