@@ -27,7 +27,7 @@
     <h2 style="margin:0;">{{ _("monthly_budget") }}</h2>
     <a class="btn" href="{{ url_for('recurring.monthly_budget', year=now.year, month=now.month) }}">
       {{ _("monthly_budget") }} {{ now.strftime('%m/%Y') }}
-      {% if upcoming_count %} · {{ upcoming_count }} {% endif %}
+      {% if upcoming_count %} · {{ upcoming_count }} {{ _("recurrence_singular") if upcoming_count == 1 else _("recurrence_plural") }}{% endif %}
     </a>
   </div>
 </div>

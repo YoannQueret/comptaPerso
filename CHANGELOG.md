@@ -5,6 +5,15 @@ All notable changes to this project are documented in this file.
 The format loosely follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 Versions are tracked in the `VERSION` file at the repo root.
 
+## [0.3.4] - 2026-08-03
+
+### Fixed
+- The "upcoming recurrences" count shown on the dashboard's monthly budget
+  button now matches what the monthly budget page actually displays: it's
+  scoped to the same account and uses the real end-of-month date instead of
+  a fixed day-28 approximation. The count is now also labeled "recurrence(s)"
+  instead of showing a bare number.
+
 ## [0.3.3] - 2026-08-02
 
 ### Added
