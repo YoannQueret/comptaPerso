@@ -18,7 +18,7 @@
     <a href="{{ url_for('transactions.list_transactions') }}">{{ _("transactions") }}</a>
     <a href="{{ url_for('recurring.monthly_budget', year=now.year, month=now.month) }}">{{ _("monthly_budget") }}</a>
     <a href="{{ url_for('reports.index') }}">{{ _("reports") }}</a>
-    <details class="navbar-dropdown">
+    <details class="navbar-dropdown" name="navbar-dropdown">
       <summary>{{ _("settings") }}</summary>
       <div class="navbar-dropdown-menu">
         <a href="{{ url_for('accounts.list_accounts') }}">{{ _("accounts") }}</a>
@@ -29,7 +29,7 @@
       </div>
     </details>
     {% if current_user.is_admin %}
-    <details class="navbar-dropdown">
+    <details class="navbar-dropdown" name="navbar-dropdown">
       <summary>{{ _("admin") }}</summary>
       <div class="navbar-dropdown-menu">
         <a href="{{ url_for('admin.list_users') }}">{{ _("admin_users") }}</a>
@@ -41,7 +41,7 @@
   <div class="navbar-right">
     <a href="{{ url_for('auth.set_locale', lang='fr') }}" class="{{ 'active-lang' if locale=='fr' else '' }}">FR</a>
     <a href="{{ url_for('auth.set_locale', lang='en') }}" class="{{ 'active-lang' if locale=='en' else '' }}">EN</a>
-    <details class="navbar-dropdown navbar-dropdown-right">
+    <details class="navbar-dropdown navbar-dropdown-right" name="navbar-dropdown">
       <summary>{{ current_user.name }}</summary>
       <div class="navbar-dropdown-menu">
         <a href="{{ url_for('auth.change_password') }}">{{ _("change_password") }}</a>
