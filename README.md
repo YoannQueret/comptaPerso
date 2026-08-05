@@ -1,5 +1,7 @@
 # comptaPerso — Multi-user personal finance tracker
 
+*[Lire en français](README_FR.md)*
+
 Self-hosted Flask application: multi-currency accounts, categories/subcategories,
 transactions, inter-account transfers (multi-currency), recurring expenses/income
 with adjustable monthly validation, and reports (period comparison, month-by-month,
