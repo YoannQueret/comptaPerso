@@ -129,6 +129,7 @@ th, td { text-align: left; padding: 0.5rem 0.6rem; border-bottom: 1px solid var(
 .table-aligned { table-layout: fixed; }
 .table-aligned .col-date { width: 15%; }
 .table-aligned .col-description { width: 40%; }
+.table-aligned .col-check { width: 28px; padding-right: 0; text-align: center; }
 th { color: var(--muted); font-weight: 600; }
 
 .amount-positive { color: var(--income); font-weight: 600; }
