@@ -7,6 +7,12 @@ DATA_DIR = os.environ.get("DATA_DIR", os.path.join(BASE_DIR, "data"))
 class Config:
     SECRET_KEY = os.environ.get("SECRET_KEY", "change-me-in-production")
     WTF_CSRF_ENABLED = True
+    # No time-based expiry on the CSRF token itself — it stays valid for as long
+    # as the session does. Flask-WTF's default (1 hour) was firing on real,
+    # legitimate use: leaving a transaction form open for a while (lunch break,
+    # distraction) and coming back to submit it, well within the same login
+    # session, still got rejected as an expired CSRF token.
+    WTF_CSRF_TIME_LIMIT = None
 
     # Allows disabling self-service registration once the initial users are set up.
     ALLOW_REGISTRATION = os.environ.get("ALLOW_REGISTRATION", "true").lower() in ("1", "true", "yes")
@@ -68,6 +74,11 @@ class Config:
 
     # How long a password reset link stays valid, in seconds.
     PASSWORD_RESET_TOKEN_MAX_AGE = int(os.environ.get("PASSWORD_RESET_TOKEN_MAX_AGE", "3600"))
+
+    # Logs a user out after this many seconds without any request (default 20
+    # minutes). Set to 0 to disable. Independent of the CSRF token lifetime above —
+    # this is about inactivity, not about how long a single open form stays valid.
+    SESSION_IDLE_TIMEOUT = int(os.environ.get("SESSION_IDLE_TIMEOUT", str(20 * 60)))
 
     # How long an admin's invite link stays valid, in seconds (default 7 days).
     INVITE_TOKEN_MAX_AGE = int(os.environ.get("INVITE_TOKEN_MAX_AGE", str(7 * 24 * 3600)))

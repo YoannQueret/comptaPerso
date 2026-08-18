@@ -4,8 +4,9 @@ import os
 import shutil
 from datetime import datetime, timedelta
 
-from flask import Flask, session, g, render_template, redirect, url_for, flash
+from flask import Flask, session, g, render_template, redirect, url_for, flash, request
 from flask_wtf import CSRFProtect
+from flask_wtf.csrf import CSRFError
 from flask_migrate import upgrade as migrate_upgrade
 
 from app.config import BASE_DIR, Config
@@ -120,6 +121,17 @@ def create_app():
 
         if current_user.is_authenticated:
             now = datetime.utcnow()
+            timeout = Config.SESSION_IDLE_TIMEOUT
+            last_activity = session.get("last_activity")
+            if timeout > 0 and last_activity and now - datetime.fromisoformat(last_activity) > timedelta(seconds=timeout):
+                from flask_login import logout_user
+
+                logout_user()
+                session.pop("last_activity", None)
+                flash(g._("session_expired_idle"), "danger")
+                return redirect(url_for("auth.login"))
+            session["last_activity"] = now.isoformat()
+
             # throttled to one write per minute per user, so every request
             # doesn't trigger a commit just to bump this timestamp
             if not current_user.last_seen_at or now - current_user.last_seen_at > timedelta(minutes=1):
@@ -129,6 +141,15 @@ def create_app():
     @app.errorhandler(404)
     def page_not_found(error):
         return render_template("404.html"), 404
+
+    @app.errorhandler(CSRFError)
+    def handle_csrf_error(error):
+        # Falls back to the raw Flask-WTF error page instead of flashing +
+        # redirecting when g._ isn't set yet (e.g. CSRF failure on a request
+        # that never reached the locale before_request hook).
+        translate = g.get("_", get_translator(Config.DEFAULT_LOCALE))
+        flash(translate("csrf_error"), "danger")
+        return redirect(request.referrer or url_for("main.dashboard"))
 
     @app.context_processor
     def inject_globals():

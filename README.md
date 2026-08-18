@@ -151,6 +151,8 @@ exports the variables into your shell before `run.py` starts.)
   `no-reply@comptaperso.local`).
 - `PASSWORD_RESET_TOKEN_MAX_AGE` — how long a password reset link stays valid,
   in seconds (default 3600 = 1 hour).
+- `SESSION_IDLE_TIMEOUT` — logs a user out after this many seconds without any
+  request, in seconds (default 1200 = 20 minutes). Set to `0` to disable.
 
 ## How recurring rules work (the important part)
 

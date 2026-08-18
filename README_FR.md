@@ -158,6 +158,8 @@ du fichier qui exporte les variables dans votre shell avant que `run.py` ne dém
   `no-reply@comptaperso.local`).
 - `PASSWORD_RESET_TOKEN_MAX_AGE` — durée de validité d'un lien de réinitialisation de
   mot de passe, en secondes (par défaut 3600 = 1 heure).
+- `SESSION_IDLE_TIMEOUT` — déconnecte un utilisateur après ce nombre de secondes
+  sans aucune requête (par défaut 1200 = 20 minutes). Mettre à `0` pour désactiver.
 
 ## Comment fonctionnent les règles récurrentes (le point important)
 

@@ -5,6 +5,36 @@ All notable changes to this project are documented in this file.
 The format loosely follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 Versions are tracked in the `VERSION` file at the repo root.
 
+## [0.3.5] - 2026-08-09
+
+### Added
+- Admin "Invitations" submenu: tracks every invite sent (send date, expiration,
+  whether it was turned into an account) and lets you resend one, which issues
+  a new link and restarts its expiration clock. The invite form moved here
+  from the Users page.
+- The Users page now shows both "last authentication" (password login) and
+  "last activity" (any authenticated request), instead of one ambiguous "last
+  login" column that only reflected the former.
+- README documents that the first account created on an install gets admin
+  rights automatically.
+- README_FR.md: a maintained French translation of the README.
+- A visual-only checkbox next to the amount in the monthly budget's validated
+  recurrences and other-transactions tables, for manually ticking things off
+  while reviewing — no state saved.
+- `SESSION_IDLE_TIMEOUT`: logs a user out after a configurable period of
+  inactivity (default 20 minutes, `0` to disable).
+
+### Changed
+- Navbar dropdowns (Settings, Administration, account menu) are now mutually
+  exclusive — opening one closes the others.
+
+### Fixed
+- CSRF tokens no longer expire after Flask-WTF's default 1 hour regardless of
+  the session — they now stay valid for the life of the session, since the
+  old default was rejecting legitimate submissions (e.g. a transaction form
+  left open over lunch). A friendly message + redirect now also replaces the
+  raw "Bad Request" page for the remaining edge cases (token really invalid).
+
 ## [0.3.4] - 2026-08-03
 
 ### Fixed
