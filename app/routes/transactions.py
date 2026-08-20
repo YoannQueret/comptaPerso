@@ -11,7 +11,15 @@ from flask_login import login_required, current_user
 
 from app.extensions import db
 from app.models import Transaction, Account, Category
-from app.utils import resolve_account_id, ordered_categories, safe_next as _safe_next
+from app.utils import (
+    resolve_account_id,
+    ordered_categories,
+    categories_by_owner,
+    safe_next as _safe_next,
+    accessible_account_ids,
+    account_access,
+    get_accessible_account_or_404,
+)
 
 bp = Blueprint("transactions", __name__, url_prefix="/transactions")
 
@@ -66,11 +74,23 @@ def list_transactions():
     date_from = _parse_date(request.args.get("date_from"))
     date_to = _parse_date(request.args.get("date_to"))
 
-    q = Transaction.query.filter_by(user_id=current_user.id)
+    accounts = Account.query.filter(
+        Account.id.in_(accessible_account_ids(current_user))
+    ).order_by(Account.name).all()
+    active_accounts = Account.query.filter(
+        Account.id.in_(accessible_account_ids(current_user, permission="write")),
+        Account.active.is_(True),
+    ).order_by(Account.name).all()
+    selected_account = next((a for a in accounts if a.id == account_id), None)
+    owner_id = selected_account.user_id if selected_account else current_user.id
+    categories_by_owner_map = categories_by_owner(active_accounts)
+    can_add_here = account_id in {a.id for a in active_accounts}
+
+    q = Transaction.query.filter(Transaction.account_id.in_(accessible_account_ids(current_user)))
     if account_id:
         q = q.filter(Transaction.account_id == account_id)
     if category_id:
-        category = Category.query.filter_by(id=category_id, user_id=current_user.id).first()
+        category = Category.query.filter_by(id=category_id, user_id=owner_id).first()
         if category:
             category_ids = [category.id] + [child.id for child in category.children]
             q = q.filter(Transaction.category_id.in_(category_ids))
@@ -100,12 +120,7 @@ def list_transactions():
                     (leg for leg in by_group.get(t.transfer_group_id, []) if leg.id != t.id), None
                 )
 
-    accounts = Account.query.filter_by(user_id=current_user.id).order_by(Account.name).all()
-    active_accounts = Account.query.filter_by(user_id=current_user.id, active=True).order_by(
-        Account.name
-    ).all()
-    categories = ordered_categories(current_user.id)
-    selected_account = next((a for a in accounts if a.id == account_id), None)
+    categories = ordered_categories(owner_id)
 
     return render_template(
         "transactions.html",
@@ -113,22 +128,34 @@ def list_transactions():
         accounts=accounts,
         active_accounts=active_accounts,
         categories=categories,
+        categories_by_owner=categories_by_owner_map,
         filters=request.args,
         transfer_counterparts=counterparts,
         sort=sort,
         today=date.today(),
         selected_account_id=account_id,
         selected_account=selected_account,
+        can_add_here=can_add_here,
     )
 
 
 @bp.route("/new", methods=["GET", "POST"])
 @login_required
 def new_transaction():
-    accounts = Account.query.filter_by(user_id=current_user.id, active=True).order_by(
-        Account.name
-    ).all()
-    categories = ordered_categories(current_user.id)
+    accounts = Account.query.filter(
+        Account.id.in_(accessible_account_ids(current_user, permission="write")),
+        Account.active.is_(True),
+    ).order_by(Account.name).all()
+    categories_by_owner_map = categories_by_owner(accounts)
+
+    preselected_account_id = resolve_account_id(current_user, request.args.get("account_id"))
+    write_ids = {a.id for a in accounts}
+    if preselected_account_id not in write_ids:
+        preselected_account_id = accounts[0].id if accounts else None
+    initial_owner_id = next(
+        (a.user_id for a in accounts if a.id == preselected_account_id), current_user.id
+    )
+    categories = ordered_categories(initial_owner_id)
 
     if request.method == "POST":
         attachment_file = request.files.get("attachment")
@@ -139,10 +166,12 @@ def new_transaction():
                 transaction=None,
                 accounts=accounts,
                 categories=categories,
-                preselected_account_id=resolve_account_id(current_user, request.args.get("account_id")),
+                categories_by_owner=categories_by_owner_map,
+                preselected_account_id=preselected_account_id,
                 next_url=_safe_next(request.form.get("next")),
             )
 
+        acc = get_accessible_account_or_404(request.form.get("account_id"), current_user, permission="write")
         kind = request.form["kind"]  # expense | income
         amount = Decimal(request.form["amount"].replace(",", "."))
         if kind == "expense":
@@ -151,8 +180,8 @@ def new_transaction():
             amount = abs(amount)
         tx_date = _parse_date(request.form["date"], date.today())
         tx = Transaction(
-            user_id=current_user.id,
-            account_id=request.form["account_id"],
+            user_id=acc.user_id,
+            account_id=acc.id,
             category_id=request.form.get("category_id") or None,
             date=tx_date,
             budget_month=_parse_budget_month(request.form.get("budget_month"), tx_date),
@@ -167,12 +196,12 @@ def new_transaction():
         next_url = _safe_next(request.form.get("next"))
         return redirect(next_url or url_for("transactions.list_transactions"))
 
-    preselected_account_id = resolve_account_id(current_user, request.args.get("account_id"))
     return render_template(
         "transaction_form.html",
         transaction=None,
         accounts=accounts,
         categories=categories,
+        categories_by_owner=categories_by_owner_map,
         preselected_account_id=preselected_account_id,
         next_url=_safe_next(request.args.get("next")),
     )
@@ -181,9 +210,15 @@ def new_transaction():
 @bp.route("/<tx_id>/edit", methods=["GET", "POST"])
 @login_required
 def edit_transaction(tx_id):
-    tx = Transaction.query.filter_by(id=tx_id, user_id=current_user.id, is_transfer=False).first_or_404()
-    accounts = Account.query.filter_by(user_id=current_user.id).order_by(Account.name).all()
-    categories = ordered_categories(current_user.id)
+    tx = Transaction.query.filter_by(id=tx_id, is_transfer=False).first_or_404()
+    if account_access(tx.account, current_user) not in ("owner", "write"):
+        abort(404)
+
+    accounts = Account.query.filter(
+        Account.id.in_(accessible_account_ids(current_user, permission="write"))
+    ).order_by(Account.name).all()
+    categories_by_owner_map = categories_by_owner(accounts)
+    categories = ordered_categories(tx.account.user_id)
 
     if request.method == "POST":
         attachment_file = request.files.get("attachment")
@@ -194,13 +229,16 @@ def edit_transaction(tx_id):
                 transaction=tx,
                 accounts=accounts,
                 categories=categories,
+                categories_by_owner=categories_by_owner_map,
                 next_url=_safe_next(request.form.get("next")),
             )
 
+        acc = get_accessible_account_or_404(request.form.get("account_id"), current_user, permission="write")
         kind = request.form["kind"]
         amount = Decimal(request.form["amount"].replace(",", "."))
         amount = -abs(amount) if kind == "expense" else abs(amount)
-        tx.account_id = request.form["account_id"]
+        tx.account_id = acc.id
+        tx.user_id = acc.user_id
         tx.category_id = request.form.get("category_id") or None
         tx.date = _parse_date(request.form["date"], tx.date)
         tx.budget_month = _parse_budget_month(request.form.get("budget_month"), tx.date)
@@ -224,6 +262,7 @@ def edit_transaction(tx_id):
         transaction=tx,
         accounts=accounts,
         categories=categories,
+        categories_by_owner=categories_by_owner_map,
         next_url=_safe_next(request.args.get("next")),
     )
 
@@ -231,7 +270,9 @@ def edit_transaction(tx_id):
 @bp.route("/<tx_id>/delete", methods=["POST"])
 @login_required
 def delete_transaction(tx_id):
-    tx = Transaction.query.filter_by(id=tx_id, user_id=current_user.id).first_or_404()
+    tx = Transaction.query.filter_by(id=tx_id).first_or_404()
+    if account_access(tx.account, current_user) not in ("owner", "write"):
+        abort(404)
     _delete_attachment(tx.attachment_filename)
     db.session.delete(tx)
     db.session.commit()
@@ -242,7 +283,9 @@ def delete_transaction(tx_id):
 @bp.route("/<tx_id>/attachment")
 @login_required
 def view_attachment(tx_id):
-    tx = Transaction.query.filter_by(id=tx_id, user_id=current_user.id).first_or_404()
+    tx = Transaction.query.filter_by(id=tx_id).first_or_404()
+    if account_access(tx.account, current_user) is None:
+        abort(404)
     if not tx.attachment_filename:
         abort(404)
     return send_from_directory(current_app.config["ATTACHMENTS_DIR"], tx.attachment_filename)

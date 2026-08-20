@@ -129,6 +129,9 @@ class Category(db.Model):
 class Transaction(db.Model):
     __tablename__ = "transactions"
     id = db.Column(db.String(36), primary_key=True, default=gen_uuid)
+    # always the *account's owner*, not necessarily whoever created the row — a
+    # write collaborator on a shared account still files under the owner, so
+    # categories/reports/budget stay scoped to a single coherent user.
     user_id = db.Column(db.String(36), db.ForeignKey("users.id"), nullable=False, index=True)
     account_id = db.Column(db.String(36), db.ForeignKey("accounts.id"), nullable=False, index=True)
     category_id = db.Column(db.String(36), db.ForeignKey("categories.id"), nullable=True)
@@ -154,6 +157,7 @@ PERIODICITIES = ["week", "month", "quarter", "year"]
 class RecurringRule(db.Model):
     __tablename__ = "recurring_rules"
     id = db.Column(db.String(36), primary_key=True, default=gen_uuid)
+    # same convention as Transaction.user_id: always the account's owner.
     user_id = db.Column(db.String(36), db.ForeignKey("users.id"), nullable=False, index=True)
     account_id = db.Column(db.String(36), db.ForeignKey("accounts.id"), nullable=False)
     category_id = db.Column(db.String(36), db.ForeignKey("categories.id"), nullable=True)
@@ -186,3 +190,25 @@ class Invitation(db.Model):
     invited_by_id = db.Column(db.String(36), db.ForeignKey("users.id"), nullable=False, index=True)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     accepted_at = db.Column(db.DateTime, nullable=True)
+
+
+class AccountShare(db.Model):
+    """Grants another user access to one of the owner's accounts, read-only or
+    read-write. The owner never changes — sharing never grants account settings
+    (rename/delete/type/currency), only transactions/transfers/recurring rules."""
+
+    __tablename__ = "account_shares"
+    id = db.Column(db.String(36), primary_key=True, default=gen_uuid)
+    account_id = db.Column(db.String(36), db.ForeignKey("accounts.id"), nullable=False, index=True)
+    user_id = db.Column(db.String(36), db.ForeignKey("users.id"), nullable=False, index=True)
+    permission = db.Column(db.String(5), nullable=False, default="read")  # "read" | "write"
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+
+    account = db.relationship("Account", backref=db.backref("shares", cascade="all, delete-orphan"))
+    user = db.relationship(
+        "User",
+        foreign_keys=[user_id],
+        backref=db.backref("account_shares_received", cascade="all, delete-orphan"),
+    )
+
+    __table_args__ = (db.UniqueConstraint("account_id", "user_id", name="uq_account_shares_account_user"),)

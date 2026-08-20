@@ -2,12 +2,12 @@ import uuid
 from datetime import date, datetime
 from decimal import Decimal
 
-from flask import Blueprint, render_template, redirect, url_for, request, flash, g
+from flask import Blueprint, render_template, redirect, url_for, request, flash, g, abort
 from flask_login import login_required, current_user
 
 from app.extensions import db
 from app.models import Transaction, Account
-from app.utils import safe_next
+from app.utils import safe_next, accessible_account_ids, account_access, get_accessible_account_or_404
 
 bp = Blueprint("transfers", __name__, url_prefix="/transfers")
 
@@ -27,17 +27,18 @@ def _parse_budget_month(s, fallback_date):
 @bp.route("/new", methods=["GET", "POST"])
 @login_required
 def new_transfer():
-    accounts = Account.query.filter_by(user_id=current_user.id, active=True).order_by(
-        Account.name
-    ).all()
+    accounts = Account.query.filter(
+        Account.id.in_(accessible_account_ids(current_user, permission="write")),
+        Account.active.is_(True),
+    ).order_by(Account.name).all()
 
     if request.method == "POST":
-        from_account = Account.query.filter_by(
-            id=request.form["from_account_id"], user_id=current_user.id
-        ).first_or_404()
-        to_account = Account.query.filter_by(
-            id=request.form["to_account_id"], user_id=current_user.id
-        ).first_or_404()
+        from_account = get_accessible_account_or_404(
+            request.form.get("from_account_id"), current_user, permission="write"
+        )
+        to_account = get_accessible_account_or_404(
+            request.form.get("to_account_id"), current_user, permission="write"
+        )
 
         next_url = safe_next(request.form.get("next"))
 
@@ -54,7 +55,7 @@ def new_transfer():
         group_id = str(uuid.uuid4())
 
         out_tx = Transaction(
-            user_id=current_user.id,
+            user_id=from_account.user_id,
             account_id=from_account.id,
             date=d,
             budget_month=budget_month,
@@ -64,7 +65,7 @@ def new_transfer():
             transfer_group_id=group_id,
         )
         in_tx = Transaction(
-            user_id=current_user.id,
+            user_id=to_account.user_id,
             account_id=to_account.id,
             date=d,
             budget_month=budget_month,
@@ -90,22 +91,26 @@ def new_transfer():
 @bp.route("/<group_id>/edit", methods=["GET", "POST"])
 @login_required
 def edit_transfer(group_id):
-    out_tx = Transaction.query.filter_by(
-        transfer_group_id=group_id, user_id=current_user.id, is_transfer=True
-    ).filter(Transaction.amount < 0).first_or_404()
-    in_tx = Transaction.query.filter_by(
-        transfer_group_id=group_id, user_id=current_user.id, is_transfer=True
-    ).filter(Transaction.id != out_tx.id).first_or_404()
+    legs = Transaction.query.filter_by(transfer_group_id=group_id, is_transfer=True).all()
+    out_tx = next((t for t in legs if t.amount < 0), None)
+    in_tx = next((t for t in legs if t is not out_tx), None)
+    if not out_tx or not in_tx:
+        abort(404)
+    if account_access(out_tx.account, current_user) not in ("owner", "write") and \
+            account_access(in_tx.account, current_user) not in ("owner", "write"):
+        abort(404)
 
-    accounts = Account.query.filter_by(user_id=current_user.id).order_by(Account.name).all()
+    accounts = Account.query.filter(
+        Account.id.in_(accessible_account_ids(current_user, permission="write"))
+    ).order_by(Account.name).all()
 
     if request.method == "POST":
-        from_account = Account.query.filter_by(
-            id=request.form["from_account_id"], user_id=current_user.id
-        ).first_or_404()
-        to_account = Account.query.filter_by(
-            id=request.form["to_account_id"], user_id=current_user.id
-        ).first_or_404()
+        from_account = get_accessible_account_or_404(
+            request.form.get("from_account_id"), current_user, permission="write"
+        )
+        to_account = get_accessible_account_or_404(
+            request.form.get("to_account_id"), current_user, permission="write"
+        )
 
         next_url = safe_next(request.form.get("next"))
 
@@ -120,12 +125,14 @@ def edit_transfer(group_id):
         description = request.form.get("description", "").strip() or g._("transfer")
 
         out_tx.account_id = from_account.id
+        out_tx.user_id = from_account.user_id
         out_tx.date = d
         out_tx.budget_month = budget_month
         out_tx.amount = -amount_sent
         out_tx.description = description
 
         in_tx.account_id = to_account.id
+        in_tx.user_id = to_account.user_id
         in_tx.date = d
         in_tx.budget_month = budget_month
         in_tx.amount = amount_received
@@ -147,9 +154,11 @@ def edit_transfer(group_id):
 @bp.route("/<group_id>/delete", methods=["POST"])
 @login_required
 def delete_transfer(group_id):
-    Transaction.query.filter_by(
-        transfer_group_id=group_id, user_id=current_user.id
-    ).delete()
+    legs = Transaction.query.filter_by(transfer_group_id=group_id).all()
+    if not legs or not any(account_access(t.account, current_user) in ("owner", "write") for t in legs):
+        abort(404)
+    for t in legs:
+        db.session.delete(t)
     db.session.commit()
     flash(g._("transfer_deleted"), "success")
     next_url = safe_next(request.form.get("next"))

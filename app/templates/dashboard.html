@@ -4,15 +4,18 @@
 
 <div class="card-grid">
   {% for acc in accounts %}
-  <div class="card">
-    <div class="muted"><a href="{{ url_for('transactions.list_transactions', account_id=acc.id) }}">{{ acc.name }}</a>{% if acc.account_type %} · {{ acc.account_type.name }}{% endif %}</div>
+  <div class="card{{ ' card-shared' if acc.user_id != current_user.id else '' }}">
+    <div class="muted"><a href="{{ url_for('transactions.list_transactions', account_id=acc.id) }}">{{ acc.name }}</a></div>
+    {% if acc.account_type %}<div class="muted" style="font-size:0.8rem;">{{ acc.account_type.name }}</div>{% endif %}
     <div class="stat-value {{ 'amount-positive' if acc.current_balance >= 0 else 'amount-negative' }}">
       {{ "%.2f"|format(acc.current_balance) }} {{ acc.currency }}
     </div>
     <div class="muted" style="font-size:0.8rem;">
       {{ _("upcoming_balance") }}: <span class="{{ 'amount-positive' if acc.balance >= 0 else 'amount-negative' }}">{{ "%.2f"|format(acc.balance) }} {{ acc.currency }}</span>
     </div>
+    {% if acc.id in write_account_ids %}
     <a class="btn btn-sm" style="margin-top:0.75rem;" href="{{ url_for('transactions.new_transaction', account_id=acc.id) }}">{{ _("add") }} — {{ _("transactions") }}</a>
+    {% endif %}
   </div>
   {% else %}
   <div class="card">

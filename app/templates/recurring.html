@@ -89,13 +89,13 @@
         <label>{{ _("account") }}</label>
         <select name="account_id" id="add-recurring-from" required>
           {% for acc in active_accounts %}
-          <option value="{{ acc.id }}" data-currency="{{ acc.currency }}" {{ 'selected' if preselected_account_id==acc.id else '' }}>{{ acc.name }} ({{ acc.currency }})</option>
+          <option value="{{ acc.id }}" data-currency="{{ acc.currency }}" data-owner="{{ acc.user_id }}" {{ 'selected' if preselected_account_id==acc.id else '' }}>{{ acc.name }} ({{ acc.currency }})</option>
           {% endfor %}
         </select>
       </div>
       <div class="form-group recurring-category-group" id="add-recurring-category-group">
         <label>{{ _("category") }}</label>
-        <select name="category_id">
+        <select name="category_id" id="add-recurring-category">
           <option value="">—</option>
           {% for cat in categories %}
           <option value="{{ cat.id }}">{{ cat.full_name }}</option>
@@ -175,5 +175,6 @@ function syncRecurringReceived(prefix) {
   document.getElementById(prefix + '-to').addEventListener('change', function() { syncRecurringReceived(prefix); });
   document.getElementById(prefix + '-amount').addEventListener('input', function() { syncRecurringReceived(prefix); });
 });
+syncCategoryOptions('add-recurring-from', 'add-recurring-category', {{ categories_by_owner|tojson }});
 </script>
 {% endblock %}

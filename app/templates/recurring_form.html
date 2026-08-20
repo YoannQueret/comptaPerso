@@ -28,13 +28,13 @@
         <label>{{ _("account") }}</label>
         <select name="account_id" id="rf-from" required>
           {% for acc in accounts %}
-          <option value="{{ acc.id }}" data-currency="{{ acc.currency }}" {{ 'selected' if (rule and rule.account_id==acc.id) or (not rule and preselected_account_id and preselected_account_id==acc.id) else '' }}>{{ acc.name }} ({{ acc.currency }})</option>
+          <option value="{{ acc.id }}" data-currency="{{ acc.currency }}" data-owner="{{ acc.user_id }}" {{ 'selected' if (rule and rule.account_id==acc.id) or (not rule and preselected_account_id and preselected_account_id==acc.id) else '' }}>{{ acc.name }} ({{ acc.currency }})</option>
           {% endfor %}
         </select>
       </div>
       <div class="form-group recurring-category-group" id="rf-category-group">
         <label>{{ _("category") }}</label>
-        <select name="category_id">
+        <select name="category_id" id="rf-category">
           <option value="">—</option>
           {% for cat in categories %}
           <option value="{{ cat.id }}" {{ 'selected' if rule and rule.category_id==cat.id else '' }}>{{ cat.full_name }}</option>
@@ -120,5 +120,6 @@ toggleRecurringKind('rf');
 document.getElementById('rf-from').addEventListener('change', function() { syncRecurringReceived('rf'); });
 document.getElementById('rf-to').addEventListener('change', function() { syncRecurringReceived('rf'); });
 document.getElementById('rf-amount').addEventListener('input', function() { syncRecurringReceived('rf'); });
+syncCategoryOptions('rf-from', 'rf-category', {{ categories_by_owner|tojson }});
 </script>
 {% endblock %}

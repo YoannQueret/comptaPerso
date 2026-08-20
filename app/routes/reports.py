@@ -7,7 +7,7 @@ from sqlalchemy import extract
 
 from app.extensions import db
 from app.models import Transaction, Category, Account
-from app.utils import resolve_account_id
+from app.utils import resolve_account_id, accessible_account_ids
 
 bp = Blueprint("reports", __name__, url_prefix="/reports")
 
@@ -19,27 +19,26 @@ def _parse_date(s, default=None):
 
 
 def _accounts_for_select():
-    return Account.query.filter_by(user_id=current_user.id).order_by(Account.name).all()
+    return Account.query.filter(Account.id.in_(accessible_account_ids(current_user))).order_by(Account.name).all()
 
 
 def _currency_for(account_id):
     if not account_id:
         return ""
-    acc = Account.query.filter_by(id=account_id, user_id=current_user.id).first()
+    acc = Account.query.filter_by(id=account_id).first()
     return acc.currency if acc else ""
 
 
 def _initial_balance_for(account_id):
     if not account_id:
         return 0.0
-    acc = Account.query.filter_by(id=account_id, user_id=current_user.id).first()
+    acc = Account.query.filter_by(id=account_id).first()
     return float(acc.initial_balance or 0) if acc else 0.0
 
 
 def _category_totals(account_id, date_from, date_to):
     """Return {category_full_name: total} of expenses and income over a period."""
     txs = Transaction.query.filter(
-        Transaction.user_id == current_user.id,
         Transaction.account_id == account_id,
         Transaction.date >= date_from,
         Transaction.date <= date_to,
@@ -100,7 +99,6 @@ def yearly_monthly(year):
     prior_total = db.session.query(
         db.func.coalesce(db.func.sum(Transaction.amount), 0)
     ).filter(
-        Transaction.user_id == current_user.id,
         Transaction.account_id == account_id,
         Transaction.date < date(year, 1, 1),
     ).scalar()
@@ -109,7 +107,6 @@ def yearly_monthly(year):
     rows = []
     for m in range(1, 13):
         txs = Transaction.query.filter(
-            Transaction.user_id == current_user.id,
             Transaction.account_id == account_id,
             extract("year", Transaction.date) == year,
             extract("month", Transaction.date) == m,
@@ -141,10 +138,7 @@ def yearly():
 
     years_query = (
         db.session.query(extract("year", Transaction.date))
-        .filter(
-            Transaction.user_id == current_user.id,
-            Transaction.account_id == account_id,
-        )
+        .filter(Transaction.account_id == account_id)
         .distinct()
         .all()
     )
@@ -153,7 +147,6 @@ def yearly():
     rows = []
     for y in years:
         txs = Transaction.query.filter(
-            Transaction.user_id == current_user.id,
             Transaction.account_id == account_id,
             extract("year", Transaction.date) == y,
         ).all()

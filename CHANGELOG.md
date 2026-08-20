@@ -5,6 +5,39 @@ All notable changes to this project are documented in this file.
 The format loosely follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 Versions are tracked in the `VERSION` file at the repo root.
 
+## [0.4.0] - 2026-08-09
+
+### Added
+- Account sharing: an account owner can share one of their accounts with
+  another existing user, either read-only or read-write, from the Accounts
+  page ("Partager" button, with a "Shared with me" section listing what
+  others have shared with you).
+  - Read-write lets a collaborator add/edit/delete transactions and transfers
+    on the account, and manage/validate its recurring rules — never rename,
+    delete, or change the account's type/currency, which stay owner-only.
+  - A shared account behaves like a normal one everywhere it's used
+    (dashboard, transactions, monthly budget, reports), using the *owner's*
+    categories so the owner's own budget/reports stay coherent regardless of
+    who actually recorded a transaction.
+  - Transfers between one of your own accounts and an account shared with you
+    (write) are supported, even across two different owners.
+  - Sharing requires the recipient to already have an account on the
+    instance; an unknown email is rejected with a clear error.
+  - Revoking a share takes effect immediately on the collaborator's next
+    request.
+- On the dashboard, shared accounts are visually distinguished (light blue
+  background), always listed after your own accounts, and only show the
+  "add transaction" shortcut when you have write access. The account's type
+  now sits on its own line under the account name.
+- The "add transaction" account picker (dashboard, transactions page, monthly
+  budget) now labels a shared account with its owner's name.
+
+### Fixed
+- Closed a latent gap where a posted account id on the transaction/recurring
+  forms was never checked against the current user before use — harmless
+  while data was fully siloed, but a real cross-account write risk now that
+  accounts can be shared.
+
 ## [0.3.5] - 2026-08-09
 
 ### Added

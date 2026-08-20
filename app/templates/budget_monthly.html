@@ -141,10 +141,12 @@
 <div class="card">
   <div class="toolbar">
     <h2 style="margin:0;">{{ _("other_transactions_this_month") }}</h2>
+    {% if can_add_here %}
     <div>
       <button type="button" class="btn btn-sm" onclick="document.getElementById('add-tx-dialog').showModal()">+ {{ _("add_transaction") }}</button>
       <button type="button" class="btn btn-sm btn-secondary" onclick="document.getElementById('add-transfer-dialog').showModal()">+ {{ _("add_transfer") }}</button>
     </div>
+    {% endif %}
   </div>
   <div class="table-wrap">
   <table class="table-aligned table-responsive">
@@ -199,15 +201,15 @@
     <div class="form-row">
       <div class="form-group">
         <label>{{ _("account") }}</label>
-        <select name="account_id" required>
+        <select name="account_id" id="add-tx-account" required>
           {% for acc in active_accounts %}
-          <option value="{{ acc.id }}" {{ 'selected' if selected_account_id==acc.id else '' }}>{{ acc.name }} ({{ acc.currency }})</option>
+          <option value="{{ acc.id }}" data-owner="{{ acc.user_id }}" {{ 'selected' if selected_account_id==acc.id else '' }}>{{ acc.name }} ({{ acc.currency }}){% if acc.user_id != current_user.id %} — {{ _("shared_by") }} {{ acc.user.name }}{% endif %}</option>
           {% endfor %}
         </select>
       </div>
       <div class="form-group">
         <label>{{ _("category") }}</label>
-        <select name="category_id">
+        <select name="category_id" id="add-tx-category">
           <option value="">—</option>
           {% for cat in categories %}
           <option value="{{ cat.id }}">{{ cat.full_name }}</option>
@@ -229,6 +231,9 @@
     </div>
   </form>
 </dialog>
+<script>
+syncCategoryOptions('add-tx-account', 'add-tx-category', {{ categories_by_owner|tojson }});
+</script>
 
 <dialog id="add-transfer-dialog" class="modal" style="max-width:520px;">
   <form method="post" action="{{ url_for('transfers.new_transfer') }}" id="transfer-form">

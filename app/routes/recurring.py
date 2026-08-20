@@ -2,12 +2,22 @@ import uuid
 from datetime import date, datetime, timedelta
 from decimal import Decimal
 
-from flask import Blueprint, render_template, redirect, url_for, request, flash, g
+from flask import Blueprint, render_template, redirect, url_for, request, flash, g, abort
 from flask_login import login_required, current_user
 
 from app.extensions import db
 from app.models import RecurringRule, Account, Category, Transaction, PERIODICITIES
-from app.utils import advance_date, month_bounds, resolve_account_id, ordered_categories, safe_next
+from app.utils import (
+    advance_date,
+    month_bounds,
+    resolve_account_id,
+    ordered_categories,
+    categories_by_owner,
+    safe_next,
+    accessible_account_ids,
+    account_access,
+    get_accessible_account_or_404,
+)
 
 bp = Blueprint("recurring", __name__)
 
@@ -22,6 +32,17 @@ def _parse_budget_month(s, fallback_date):
     if s:
         return datetime.strptime(s, "%Y-%m").date().replace(day=1)
     return fallback_date.replace(day=1)
+
+
+def _rule_access(rule):
+    """True if current_user has write/owner access to this rule's account — for a
+    transfer rule, either leg's account being write-accessible is enough (mirrors
+    the "either leg" rule used for editing an already-existing transfer)."""
+    if account_access(rule.account, current_user) in ("owner", "write"):
+        return True
+    if rule.is_transfer and rule.to_account and account_access(rule.to_account, current_user) in ("owner", "write"):
+        return True
+    return False
 
 
 SORT_COLUMNS = {
@@ -46,17 +67,29 @@ def list_recurring():
     column = SORT_COLUMNS[sort]
     order = column.asc() if direction == "asc" else column.desc()
 
-    q = RecurringRule.query.filter_by(user_id=current_user.id)
+    ids = accessible_account_ids(current_user)
+    q = RecurringRule.query.filter(
+        db.or_(RecurringRule.account_id.in_(ids), RecurringRule.to_account_id.in_(ids))
+    )
     q = q.join(Account, RecurringRule.account_id == Account.id)
     if sort == "category":
         q = q.outerjoin(Category, RecurringRule.category_id == Category.id)
     rules = q.order_by(order).all()
 
-    active_accounts = Account.query.filter_by(user_id=current_user.id, active=True).order_by(
-        Account.name
-    ).all()
-    categories = ordered_categories(current_user.id)
+    active_accounts = Account.query.filter(
+        Account.id.in_(accessible_account_ids(current_user, permission="write")),
+        Account.active.is_(True),
+    ).order_by(Account.name).all()
+    categories_by_owner_map = categories_by_owner(active_accounts)
+
     preselected_account_id = resolve_account_id(current_user, None)
+    write_ids = {a.id for a in active_accounts}
+    if preselected_account_id not in write_ids:
+        preselected_account_id = active_accounts[0].id if active_accounts else None
+    initial_owner_id = next(
+        (a.user_id for a in active_accounts if a.id == preselected_account_id), current_user.id
+    )
+    categories = ordered_categories(initial_owner_id)
 
     return render_template(
         "recurring.html",
@@ -65,6 +98,7 @@ def list_recurring():
         direction=direction,
         active_accounts=active_accounts,
         categories=categories,
+        categories_by_owner=categories_by_owner_map,
         periodicities=PERIODICITIES,
         preselected_account_id=preselected_account_id,
         today=date.today(),
@@ -88,10 +122,20 @@ def _parse_rule_amounts(form, kind):
 @bp.route("/recurring/new", methods=["GET", "POST"])
 @login_required
 def new_recurring():
-    accounts = Account.query.filter_by(user_id=current_user.id, active=True).order_by(
-        Account.name
-    ).all()
-    categories = ordered_categories(current_user.id)
+    accounts = Account.query.filter(
+        Account.id.in_(accessible_account_ids(current_user, permission="write")),
+        Account.active.is_(True),
+    ).order_by(Account.name).all()
+    categories_by_owner_map = categories_by_owner(accounts)
+
+    preselected_account_id = resolve_account_id(current_user, request.args.get("account_id"))
+    write_ids = {a.id for a in accounts}
+    if preselected_account_id not in write_ids:
+        preselected_account_id = accounts[0].id if accounts else None
+    initial_owner_id = next(
+        (a.user_id for a in accounts if a.id == preselected_account_id), current_user.id
+    )
+    categories = ordered_categories(initial_owner_id)
 
     if request.method == "POST":
         kind = request.form["kind"]
@@ -106,20 +150,26 @@ def new_recurring():
                 rule=None,
                 accounts=accounts,
                 categories=categories,
+                categories_by_owner=categories_by_owner_map,
                 periodicities=PERIODICITIES,
-                preselected_account_id=resolve_account_id(current_user, request.args.get("account_id")),
+                preselected_account_id=preselected_account_id,
                 next_url=safe_next(request.form.get("next")),
             )
 
+        acc = get_accessible_account_or_404(request.form.get("account_id"), current_user, permission="write")
+        to_account = None
+        if is_transfer:
+            to_account = get_accessible_account_or_404(to_account_id, current_user, permission="write")
+
         start = _parse_date(request.form["start_date"], date.today())
         rule = RecurringRule(
-            user_id=current_user.id,
-            account_id=request.form["account_id"],
+            user_id=acc.user_id,
+            account_id=acc.id,
             category_id=category_id,
             label=request.form["label"].strip(),
             amount=amount,
             is_transfer=is_transfer,
-            to_account_id=to_account_id,
+            to_account_id=to_account.id if to_account else None,
             amount_received=amount_received,
             periodicity=request.form.get("periodicity", "month"),
             interval=int(request.form.get("interval") or 1),
@@ -133,12 +183,12 @@ def new_recurring():
         next_url = safe_next(request.form.get("next"))
         return redirect(next_url or url_for("recurring.list_recurring"))
 
-    preselected_account_id = resolve_account_id(current_user, request.args.get("account_id"))
     return render_template(
         "recurring_form.html",
         rule=None,
         accounts=accounts,
         categories=categories,
+        categories_by_owner=categories_by_owner_map,
         periodicities=PERIODICITIES,
         preselected_account_id=preselected_account_id,
         next_url=safe_next(request.args.get("next")),
@@ -148,9 +198,15 @@ def new_recurring():
 @bp.route("/recurring/<rule_id>/edit", methods=["GET", "POST"])
 @login_required
 def edit_recurring(rule_id):
-    rule = RecurringRule.query.filter_by(id=rule_id, user_id=current_user.id).first_or_404()
-    accounts = Account.query.filter_by(user_id=current_user.id).order_by(Account.name).all()
-    categories = ordered_categories(current_user.id)
+    rule = RecurringRule.query.filter_by(id=rule_id).first_or_404()
+    if not _rule_access(rule):
+        abort(404)
+
+    accounts = Account.query.filter(
+        Account.id.in_(accessible_account_ids(current_user, permission="write"))
+    ).order_by(Account.name).all()
+    categories_by_owner_map = categories_by_owner(accounts)
+    categories = ordered_categories(rule.account.user_id)
 
     if request.method == "POST":
         kind = request.form["kind"]
@@ -162,14 +218,21 @@ def edit_recurring(rule_id):
             flash(g._("transfer_accounts_must_differ"), "danger")
             return render_template(
                 "recurring_form.html", rule=rule, accounts=accounts, categories=categories,
+                categories_by_owner=categories_by_owner_map,
                 periodicities=PERIODICITIES,
             )
 
+        acc = get_accessible_account_or_404(request.form.get("account_id"), current_user, permission="write")
+        to_account = None
+        if is_transfer:
+            to_account = get_accessible_account_or_404(to_account_id, current_user, permission="write")
+
         rule.amount = amount
         rule.is_transfer = is_transfer
-        rule.to_account_id = to_account_id
+        rule.to_account_id = to_account.id if to_account else None
         rule.amount_received = amount_received
-        rule.account_id = request.form["account_id"]
+        rule.account_id = acc.id
+        rule.user_id = acc.user_id
         rule.category_id = category_id
         rule.label = request.form["label"].strip()
         rule.periodicity = request.form.get("periodicity", "month")
@@ -186,6 +249,7 @@ def edit_recurring(rule_id):
         rule=rule,
         accounts=accounts,
         categories=categories,
+        categories_by_owner=categories_by_owner_map,
         periodicities=PERIODICITIES,
     )
 
@@ -193,7 +257,9 @@ def edit_recurring(rule_id):
 @bp.route("/recurring/<rule_id>/delete", methods=["POST"])
 @login_required
 def delete_recurring(rule_id):
-    rule = RecurringRule.query.filter_by(id=rule_id, user_id=current_user.id).first_or_404()
+    rule = RecurringRule.query.filter_by(id=rule_id).first_or_404()
+    if not _rule_access(rule):
+        abort(404)
     db.session.delete(rule)
     db.session.commit()
     flash(g._("recurring_deleted"), "success")
@@ -204,15 +270,16 @@ def _carryover_balance(account_id, start):
     """Budget balance just before `start`: initial balance + all transactions whose
     budget_month is before this one (not `date` — a budget-shifted transaction must
     be counted exactly once, either in the carryover or in the month's own total)."""
+    ids = accessible_account_ids(current_user)
     carryover_q = db.session.query(
         db.func.coalesce(db.func.sum(Transaction.amount), 0)
     ).filter(
-        Transaction.user_id == current_user.id,
+        Transaction.account_id.in_(ids),
         Transaction.budget_month < start,
     )
     initial_balance_q = db.session.query(
         db.func.coalesce(db.func.sum(Account.initial_balance), 0)
-    ).filter(Account.user_id == current_user.id)
+    ).filter(Account.id.in_(ids))
     if account_id:
         carryover_q = carryover_q.filter(Transaction.account_id == account_id)
         initial_balance_q = initial_balance_q.filter(Account.id == account_id)
@@ -234,11 +301,12 @@ def _rule_pending_amount(rule, account_id):
 def monthly_budget(year, month):
     start, end = month_bounds(year, month)
     account_id = resolve_account_id(current_user, request.args.get("account_id"))
+    ids = accessible_account_ids(current_user)
 
     # occurrences due this month or overdue (not yet validated) — a transfer rule
     # is due on both its source and destination account's budget page.
     due_rules_q = RecurringRule.query.filter(
-        RecurringRule.user_id == current_user.id,
+        db.or_(RecurringRule.account_id.in_(ids), RecurringRule.to_account_id.in_(ids)),
         RecurringRule.active.is_(True),
         RecurringRule.next_due_date <= end,
     )
@@ -249,7 +317,7 @@ def monthly_budget(year, month):
     due_rules = due_rules_q.order_by(RecurringRule.next_due_date).all()
 
     validated_txs_q = Transaction.query.filter(
-        Transaction.user_id == current_user.id,
+        Transaction.account_id.in_(ids),
         Transaction.budget_month == start,
         Transaction.recurring_rule_id.isnot(None),
     )
@@ -258,7 +326,7 @@ def monthly_budget(year, month):
     validated_txs = validated_txs_q.order_by(Transaction.date).all()
 
     other_txs_q = Transaction.query.filter(
-        Transaction.user_id == current_user.id,
+        Transaction.account_id.in_(ids),
         Transaction.budget_month == start,
         Transaction.recurring_rule_id.is_(None),
     )
@@ -295,9 +363,21 @@ def monthly_budget(year, month):
     prev_month = start.replace(day=1) - timedelta(days=1)
     next_month_date = end + timedelta(days=1)
 
-    accounts = Account.query.filter_by(user_id=current_user.id).order_by(Account.name).all()
-    active_accounts = [a for a in accounts if a.active]
-    categories = ordered_categories(current_user.id)
+    accounts = Account.query.filter(Account.id.in_(ids)).order_by(Account.name).all()
+    active_accounts = Account.query.filter(
+        Account.id.in_(accessible_account_ids(current_user, permission="write")),
+        Account.active.is_(True),
+    ).order_by(Account.name).all()
+    categories_by_owner_map = categories_by_owner(active_accounts)
+    write_ids = {a.id for a in active_accounts}
+    dialog_account_id = account_id if account_id in write_ids else (
+        active_accounts[0].id if active_accounts else None
+    )
+    dialog_owner_id = next(
+        (a.user_id for a in active_accounts if a.id == dialog_account_id), current_user.id
+    )
+    categories = ordered_categories(dialog_owner_id)
+    can_add_here = account_id in write_ids
 
     return render_template(
         "budget_monthly.html",
@@ -313,6 +393,7 @@ def monthly_budget(year, month):
         remaining_forecast=remaining_forecast,
         active_accounts=active_accounts,
         categories=categories,
+        categories_by_owner=categories_by_owner_map,
         today=date.today(),
         carryover=carryover,
         net_with_carryover=net_with_carryover,
@@ -323,6 +404,7 @@ def monthly_budget(year, month):
         accounts=accounts,
         selected_account_id=account_id,
         transfer_counterparts=transfer_counterparts,
+        can_add_here=can_add_here,
     )
 
 
@@ -347,8 +429,9 @@ def monthly_budget_chart_data(year, month):
     start, end = month_bounds(year, month)
     account_id = resolve_account_id(current_user, request.args.get("account_id"))
     today = date.today()
+    ids = accessible_account_ids(current_user)
 
-    account = Account.query.filter_by(id=account_id, user_id=current_user.id).first() if account_id else None
+    account = Account.query.filter(Account.id == account_id, Account.id.in_(ids)).first() if account_id else None
 
     # Charted transactions must match the same set the summary cards count for
     # this month (budget_month), not the real transaction date — otherwise a
@@ -357,11 +440,11 @@ def monthly_budget_chart_data(year, month):
     # ending balance would no longer reconcile with "net balance (with
     # carryover)" + the remaining forecast.
     txs_q = Transaction.query.filter(
-        Transaction.user_id == current_user.id,
+        Transaction.account_id.in_(ids),
         Transaction.budget_month == start,
     )
     due_rules_q = RecurringRule.query.filter(
-        RecurringRule.user_id == current_user.id,
+        db.or_(RecurringRule.account_id.in_(ids), RecurringRule.to_account_id.in_(ids)),
         RecurringRule.active.is_(True),
         RecurringRule.next_due_date <= end,
     )
@@ -430,7 +513,9 @@ def monthly_budget_chart_data(year, month):
 @bp.route("/budget/validate/<rule_id>", methods=["POST"])
 @login_required
 def validate_occurrence(rule_id):
-    rule = RecurringRule.query.filter_by(id=rule_id, user_id=current_user.id).first_or_404()
+    rule = RecurringRule.query.filter_by(id=rule_id).first_or_404()
+    if not _rule_access(rule):
+        abort(404)
     occ_date = _parse_date(request.form["date"], rule.next_due_date)
     budget_month = _parse_budget_month(request.form.get("budget_month"), occ_date)
 
@@ -440,7 +525,7 @@ def validate_occurrence(rule_id):
         amount_received = abs(Decimal(received_raw.replace(",", ".")))
         group_id = str(uuid.uuid4())
         db.session.add(Transaction(
-            user_id=current_user.id,
+            user_id=rule.account.user_id,
             account_id=rule.account_id,
             date=occ_date,
             budget_month=budget_month,
@@ -451,7 +536,7 @@ def validate_occurrence(rule_id):
             recurring_rule_id=rule.id,
         ))
         db.session.add(Transaction(
-            user_id=current_user.id,
+            user_id=rule.to_account.user_id,
             account_id=rule.to_account_id,
             date=occ_date,
             budget_month=budget_month,
@@ -465,7 +550,7 @@ def validate_occurrence(rule_id):
         amount = Decimal(request.form["amount"].replace(",", "."))
         amount = -abs(amount) if rule.amount < 0 else abs(amount)
         db.session.add(Transaction(
-            user_id=current_user.id,
+            user_id=rule.account.user_id,
             account_id=rule.account_id,
             category_id=rule.category_id,
             date=occ_date,
@@ -499,7 +584,9 @@ def validate_occurrence(rule_id):
 @bp.route("/budget/ignore/<rule_id>", methods=["POST"])
 @login_required
 def ignore_occurrence(rule_id):
-    rule = RecurringRule.query.filter_by(id=rule_id, user_id=current_user.id).first_or_404()
+    rule = RecurringRule.query.filter_by(id=rule_id).first_or_404()
+    if not _rule_access(rule):
+        abort(404)
 
     rule.next_due_date = advance_date(rule.next_due_date, rule.periodicity, rule.interval)
     if rule.end_date and rule.next_due_date > rule.end_date:
@@ -525,19 +612,19 @@ def ignore_occurrence(rule_id):
 @login_required
 def unvalidate_occurrence(tx_id):
     tx = (
-        Transaction.query.filter_by(id=tx_id, user_id=current_user.id)
+        Transaction.query.filter_by(id=tx_id)
         .filter(Transaction.recurring_rule_id.isnot(None))
         .first_or_404()
     )
+    if account_access(tx.account, current_user) not in ("owner", "write"):
+        abort(404)
     rule = tx.recurring_rule
     occ_date = tx.date
 
     rule.next_due_date = occ_date
     rule.active = True
     if tx.is_transfer:
-        Transaction.query.filter_by(
-            transfer_group_id=tx.transfer_group_id, user_id=current_user.id
-        ).delete()
+        Transaction.query.filter_by(transfer_group_id=tx.transfer_group_id).delete()
     else:
         db.session.delete(tx)
     db.session.commit()

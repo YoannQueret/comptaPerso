@@ -37,6 +37,7 @@
         </td>
         <td>
           <a class="btn btn-sm btn-secondary" href="{{ url_for('accounts.edit_account', account_id=acc.id) }}">{{ _("edit") }}</a>
+          <button type="button" class="btn btn-sm btn-secondary" onclick="document.getElementById('share-dialog-{{ acc.id }}').showModal()">{{ _("share_account") }}</button>
           <form class="inline" method="post" action="{{ url_for('accounts.delete_account', account_id=acc.id) }}" onsubmit="return confirm('{{ _("confirm_delete_account") }}');">
   <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
             <button class="btn btn-sm btn-danger" type="submit">{{ _("delete") }}</button>
@@ -50,4 +51,87 @@
   </table>
   </div>
 </div>
+
+<div class="card">
+  <h2>{{ _("shared_with_me") }}</h2>
+  <div class="table-wrap">
+  <table class="table-responsive">
+    <thead>
+      <tr><th>{{ _("name") }}</th><th>{{ _("shared_by") }}</th><th>{{ _("share_permission_label") }}</th><th>{{ _("balance") }}</th></tr>
+    </thead>
+    <tbody>
+      {% for share in shares_received %}
+      <tr>
+        <td data-label="{{ _('name') }}"><a href="{{ url_for('transactions.list_transactions', account_id=share.account.id) }}">{{ share.account.name }}</a></td>
+        <td data-label="{{ _('shared_by') }}">{{ share.account.user.name }}</td>
+        <td data-label="{{ _('share_permission_label') }}">
+          {% if share.permission == 'write' %}
+          <span class="badge-kind badge-kind-income">{{ _("permission_write") }}</span>
+          {% else %}
+          <span class="badge-kind badge-kind-both">{{ _("permission_read") }}</span>
+          {% endif %}
+        </td>
+        <td data-label="{{ _('balance') }}" class="{{ 'amount-positive' if share.account.balance >= 0 else 'amount-negative' }}">{{ "%.2f"|format(share.account.balance) }}</td>
+      </tr>
+      {% else %}
+      <tr><td colspan="4">{{ _("no_shares") }}</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+  </div>
+</div>
+
+{% for acc in accounts %}
+<dialog id="share-dialog-{{ acc.id }}" class="modal">
+  <h2 style="margin-top:0;">{{ _("share_dialog_title") }} — {{ acc.name }}</h2>
+  <form method="post" action="{{ url_for('accounts.share_account', account_id=acc.id) }}">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+    <div class="form-group">
+      <label>{{ _("share_email_label") }}</label>
+      <input type="email" name="email" placeholder="email@example.com" required>
+    </div>
+    <div class="form-group">
+      <label>{{ _("share_permission_label") }}</label>
+      <select name="permission">
+        <option value="read">{{ _("permission_read") }}</option>
+        <option value="write">{{ _("permission_write") }}</option>
+      </select>
+    </div>
+    <div class="toolbar" style="margin-bottom:0;">
+      <button type="button" class="btn btn-secondary" onclick="document.getElementById('share-dialog-{{ acc.id }}').close()">{{ _("cancel") }}</button>
+      <button class="btn" type="submit">{{ _("share_submit") }}</button>
+    </div>
+  </form>
+
+  {% if acc.shares %}
+  <div class="table-wrap" style="margin-top:1rem;">
+  <table class="table-responsive">
+    <thead><tr><th>{{ _("email") }}</th><th>{{ _("share_permission_label") }}</th><th></th></tr></thead>
+    <tbody>
+      {% for share in acc.shares %}
+      <tr>
+        <td data-label="{{ _('email') }}">{{ share.user.email }}</td>
+        <td data-label="{{ _('share_permission_label') }}">
+          {% if share.permission == 'write' %}
+          <span class="badge-kind badge-kind-income">{{ _("permission_write") }}</span>
+          {% else %}
+          <span class="badge-kind badge-kind-both">{{ _("permission_read") }}</span>
+          {% endif %}
+        </td>
+        <td>
+          <form class="inline" method="post" action="{{ url_for('accounts.revoke_share', account_id=acc.id, share_id=share.id) }}" onsubmit="return confirm('{{ _("confirm_revoke_share") }}');">
+  <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            <button class="btn btn-sm btn-danger" type="submit">{{ _("revoke") }}</button>
+          </form>
+        </td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+  </div>
+  {% else %}
+  <p class="muted">{{ _("no_shares") }}</p>
+  {% endif %}
+</dialog>
+{% endfor %}
 {% endblock %}

@@ -116,6 +116,11 @@ body {
 }
 .card-highlight .stat-value { font-size: 1.9rem; }
 
+.card-shared {
+  background: #eef2ff;
+  border-color: #c7d2fe;
+}
+
 h1 { font-size: 1.5rem; margin-top: 0; }
 h2 { font-size: 1.2rem; }
 

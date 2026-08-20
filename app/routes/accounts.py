@@ -2,7 +2,7 @@ from flask import Blueprint, render_template, redirect, url_for, request, flash,
 from flask_login import login_required, current_user
 
 from app.extensions import db
-from app.models import Account, AccountType, Currency
+from app.models import Account, AccountType, Currency, AccountShare, User
 
 
 bp = Blueprint("accounts", __name__, url_prefix="/accounts")
@@ -30,7 +30,13 @@ def _currencies_for_select(current_code=None):
 @login_required
 def list_accounts():
     accounts = Account.query.filter_by(user_id=current_user.id).order_by(Account.name).all()
-    return render_template("accounts.html", accounts=accounts)
+    shares_received = (
+        AccountShare.query.filter_by(user_id=current_user.id)
+        .join(Account)
+        .order_by(Account.name)
+        .all()
+    )
+    return render_template("accounts.html", accounts=accounts, shares_received=shares_received)
 
 
 @bp.route("/new", methods=["GET", "POST"])
@@ -101,4 +107,43 @@ def set_default_account(account_id):
     current_user.default_account_id = acc.id
     db.session.commit()
     flash(g._("default_account_updated"), "success")
+    return redirect(url_for("accounts.list_accounts"))
+
+
+@bp.route("/<account_id>/share", methods=["POST"])
+@login_required
+def share_account(account_id):
+    acc = Account.query.filter_by(id=account_id, user_id=current_user.id).first_or_404()
+    email = request.form.get("email", "").strip().lower()
+    permission = request.form.get("permission")
+    if permission not in ("read", "write"):
+        permission = "read"
+
+    collaborator = User.query.filter_by(email=email).first()
+    if not collaborator:
+        flash(g._("share_email_not_found"), "danger")
+        return redirect(url_for("accounts.list_accounts"))
+    if collaborator.id == current_user.id:
+        flash(g._("share_email_not_found"), "danger")
+        return redirect(url_for("accounts.list_accounts"))
+
+    share = AccountShare.query.filter_by(account_id=acc.id, user_id=collaborator.id).first()
+    if share:
+        share.permission = permission
+        flash(g._("share_updated"), "success")
+    else:
+        db.session.add(AccountShare(account_id=acc.id, user_id=collaborator.id, permission=permission))
+        flash(g._("share_created"), "success")
+    db.session.commit()
+    return redirect(url_for("accounts.list_accounts"))
+
+
+@bp.route("/<account_id>/shares/<share_id>/revoke", methods=["POST"])
+@login_required
+def revoke_share(account_id, share_id):
+    acc = Account.query.filter_by(id=account_id, user_id=current_user.id).first_or_404()
+    share = AccountShare.query.filter_by(id=share_id, account_id=acc.id).first_or_404()
+    db.session.delete(share)
+    db.session.commit()
+    flash(g._("share_revoked"), "success")
     return redirect(url_for("accounts.list_accounts"))
