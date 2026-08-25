@@ -1,4 +1,6 @@
+import re
 from datetime import date
+from decimal import Decimal, InvalidOperation
 from dateutil.relativedelta import relativedelta
 
 
@@ -92,6 +94,33 @@ def resolve_account_id(user, requested_account_id):
         session["selected_account_id"] = fallback.id
         return fallback.id
     return None
+
+
+def parse_decimal(raw):
+    """Parse a user-typed amount into a Decimal, tolerating whatever a bank
+    statement, a receipt, or a non-English keyboard might produce: a comma as
+    decimal separator, a space/apostrophe/dot used as a thousands separator
+    (e.g. Swiss "1'234.50", French "1 234,50"), a stray currency symbol.
+    Raises ValueError (never decimal.InvalidOperation) if truly unparseable,
+    so callers only need to catch one exception type."""
+    if raw is None:
+        raise ValueError("empty amount")
+    s = re.sub(r"[^\d,.\-]", "", raw.strip())
+    if not s:
+        raise ValueError("empty amount")
+    if "," in s and "." in s:
+        # whichever separator appears last is the decimal point; the other
+        # one(s) must be thousands separators, so drop them
+        if s.rfind(",") > s.rfind("."):
+            s = s.replace(".", "").replace(",", ".")
+        else:
+            s = s.replace(",", "")
+    elif "," in s:
+        s = s.replace(",", ".")
+    try:
+        return Decimal(s)
+    except InvalidOperation:
+        raise ValueError(f"invalid amount: {raw!r}")
 
 
 def safe_next(url):

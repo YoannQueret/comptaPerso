@@ -5,6 +5,27 @@ All notable changes to this project are documented in this file.
 The format loosely follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 Versions are tracked in the `VERSION` file at the repo root.
 
+## [0.4.1] - 2026-08-26
+
+### Added
+- A "reviewed" tick mark next to the amount, on both the transactions page
+  and the monthly budget page's tables — a shared checklist aid with no
+  effect on any balance/report. Persisted server-side, so it's kept across
+  reloads and visible to anyone with access to the account (including a
+  shared account's collaborators).
+
+### Changed
+- On the monthly budget page, both the validated recurrences and the other
+  transactions tables now sort by date, most recent first.
+
+### Fixed
+- Amount fields (transactions, transfers, recurring rules) now tolerate
+  whatever a bank statement or a non-English keyboard produces — a comma
+  decimal separator, a space/apostrophe/dot thousands separator (e.g. Swiss
+  "1'234.50"), a stray currency symbol — instead of crashing with an
+  "Internal Server Error" on anything that wasn't a plain "1234.56". A
+  genuinely invalid amount now shows a clear validation message instead.
+
 ## [0.4.0] - 2026-08-09
 
 ### Added

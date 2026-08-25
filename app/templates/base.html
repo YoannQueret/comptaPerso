@@ -3,6 +3,7 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
+  {% if current_user.is_authenticated %}<meta name="csrf-token" content="{{ csrf_token() }}">{% endif %}
   <title>comptaPerso</title>
   <link rel="icon" type="image/x-icon" href="{{ url_for('static', filename='favicon.ico') }}">
   <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
@@ -82,6 +83,7 @@ window.MONTH_NAMES = [{% for i in range(1, 13) %}{{ month_name(locale, i)|tojson
 </script>
 <script src="{{ url_for('static', filename='month-picker.js') }}"></script>
 <script src="{{ url_for('static', filename='table-search.js') }}"></script>
+<script src="{{ url_for('static', filename='checkbox-persist.js') }}"></script>
 <script src="{{ url_for('static', filename='attachment-viewer.js') }}"></script>
 <script src="{{ url_for('static', filename='image-compress.js') }}"></script>
 </body>

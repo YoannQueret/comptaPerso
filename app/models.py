@@ -147,6 +147,9 @@ class Transaction(db.Model):
     recurring_rule_id = db.Column(db.String(36), db.ForeignKey("recurring_rules.id"), nullable=True)
     attachment_filename = db.Column(db.String(255), nullable=True)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    # visual-only "reviewed" tick mark on the monthly budget / transactions
+    # pages — no effect on any balance/report, just a personal checklist aid.
+    reviewed = db.Column(db.Boolean, default=False)
 
     category = db.relationship("Category")
 

@@ -1,6 +1,5 @@
 import uuid
 from datetime import date, datetime, timedelta
-from decimal import Decimal
 
 from flask import Blueprint, render_template, redirect, url_for, request, flash, g, abort
 from flask_login import login_required, current_user
@@ -17,6 +16,7 @@ from app.utils import (
     accessible_account_ids,
     account_access,
     get_accessible_account_or_404,
+    parse_decimal,
 )
 
 bp = Blueprint("recurring", __name__)
@@ -107,14 +107,15 @@ def list_recurring():
 
 def _parse_rule_amounts(form, kind):
     """Return (amount, is_transfer, to_account_id, amount_received, category_id)
-    from a recurring-rule form, given the selected kind (expense/income/transfer)."""
+    from a recurring-rule form, given the selected kind (expense/income/transfer).
+    Raises ValueError if an amount can't be parsed."""
     if kind == "transfer":
-        amount = -abs(Decimal(form["amount"].replace(",", ".")))
-        received_raw = form.get("amount_received") or form["amount"]
-        amount_received = abs(Decimal(received_raw.replace(",", ".")))
+        amount = -abs(parse_decimal(form.get("amount")))
+        received_raw = form.get("amount_received") or form.get("amount")
+        amount_received = abs(parse_decimal(received_raw))
         return amount, True, form.get("to_account_id") or None, amount_received, None
 
-    amount = Decimal(form["amount"].replace(",", "."))
+    amount = parse_decimal(form.get("amount"))
     amount = -abs(amount) if kind == "expense" else abs(amount)
     return amount, False, None, None, form.get("category_id") or None
 
@@ -139,9 +140,22 @@ def new_recurring():
 
     if request.method == "POST":
         kind = request.form["kind"]
-        amount, is_transfer, to_account_id, amount_received, category_id = _parse_rule_amounts(
-            request.form, kind
-        )
+        try:
+            amount, is_transfer, to_account_id, amount_received, category_id = _parse_rule_amounts(
+                request.form, kind
+            )
+        except ValueError:
+            flash(g._("invalid_transaction_data"), "danger")
+            return render_template(
+                "recurring_form.html",
+                rule=None,
+                accounts=accounts,
+                categories=categories,
+                categories_by_owner=categories_by_owner_map,
+                periodicities=PERIODICITIES,
+                preselected_account_id=preselected_account_id,
+                next_url=safe_next(request.form.get("next")),
+            )
 
         if is_transfer and to_account_id == request.form["account_id"]:
             flash(g._("transfer_accounts_must_differ"), "danger")
@@ -210,9 +224,17 @@ def edit_recurring(rule_id):
 
     if request.method == "POST":
         kind = request.form["kind"]
-        amount, is_transfer, to_account_id, amount_received, category_id = _parse_rule_amounts(
-            request.form, kind
-        )
+        try:
+            amount, is_transfer, to_account_id, amount_received, category_id = _parse_rule_amounts(
+                request.form, kind
+            )
+        except ValueError:
+            flash(g._("invalid_transaction_data"), "danger")
+            return render_template(
+                "recurring_form.html", rule=rule, accounts=accounts, categories=categories,
+                categories_by_owner=categories_by_owner_map,
+                periodicities=PERIODICITIES,
+            )
 
         if is_transfer and to_account_id == request.form["account_id"]:
             flash(g._("transfer_accounts_must_differ"), "danger")
@@ -323,7 +345,7 @@ def monthly_budget(year, month):
     )
     if account_id:
         validated_txs_q = validated_txs_q.filter(Transaction.account_id == account_id)
-    validated_txs = validated_txs_q.order_by(Transaction.date).all()
+    validated_txs = validated_txs_q.order_by(Transaction.date.desc()).all()
 
     other_txs_q = Transaction.query.filter(
         Transaction.account_id.in_(ids),
@@ -332,7 +354,7 @@ def monthly_budget(year, month):
     )
     if account_id:
         other_txs_q = other_txs_q.filter(Transaction.account_id == account_id)
-    other_txs = other_txs_q.order_by(Transaction.date).all()
+    other_txs = other_txs_q.order_by(Transaction.date.desc()).all()
 
     transfer_group_ids = {t.transfer_group_id for t in other_txs if t.is_transfer}
     transfer_counterparts = {}
@@ -516,13 +538,35 @@ def validate_occurrence(rule_id):
     rule = RecurringRule.query.filter_by(id=rule_id).first_or_404()
     if not _rule_access(rule):
         abort(404)
-    occ_date = _parse_date(request.form["date"], rule.next_due_date)
-    budget_month = _parse_budget_month(request.form.get("budget_month"), occ_date)
+
+    def _back_to_budget():
+        fallback_date = _parse_date(request.form.get("date"), rule.next_due_date) or rule.next_due_date
+        redirect_year = request.form.get("year", type=int) or fallback_date.year
+        redirect_month = request.form.get("month", type=int) or fallback_date.month
+        redirect_account_id = request.form.get("account_id") or None
+        return redirect(
+            url_for(
+                "recurring.monthly_budget",
+                year=redirect_year,
+                month=redirect_month,
+                account_id=redirect_account_id,
+            )
+        )
+
+    try:
+        occ_date = _parse_date(request.form["date"], rule.next_due_date)
+        budget_month = _parse_budget_month(request.form.get("budget_month"), occ_date)
+        if rule.is_transfer:
+            amount_sent = abs(parse_decimal(request.form.get("amount")))
+            received_raw = request.form.get("amount_received") or request.form.get("amount")
+            amount_received = abs(parse_decimal(received_raw))
+        else:
+            amount = parse_decimal(request.form.get("amount"))
+    except ValueError:
+        flash(g._("invalid_transaction_data"), "danger")
+        return _back_to_budget()
 
     if rule.is_transfer:
-        amount_sent = abs(Decimal(request.form["amount"].replace(",", ".")))
-        received_raw = request.form.get("amount_received") or request.form["amount"]
-        amount_received = abs(Decimal(received_raw.replace(",", ".")))
         group_id = str(uuid.uuid4())
         db.session.add(Transaction(
             user_id=rule.account.user_id,
@@ -547,7 +591,6 @@ def validate_occurrence(rule_id):
             recurring_rule_id=rule.id,
         ))
     else:
-        amount = Decimal(request.form["amount"].replace(",", "."))
         amount = -abs(amount) if rule.amount < 0 else abs(amount)
         db.session.add(Transaction(
             user_id=rule.account.user_id,

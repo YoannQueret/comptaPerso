@@ -1,7 +1,6 @@
 import os
 import uuid
 from datetime import datetime, date
-from decimal import Decimal
 
 from flask import (
     Blueprint, render_template, redirect, url_for, request, flash, g,
@@ -15,6 +14,7 @@ from app.utils import (
     resolve_account_id,
     ordered_categories,
     categories_by_owner,
+    parse_decimal,
     safe_next as _safe_next,
     accessible_account_ids,
     account_access,
@@ -173,12 +173,24 @@ def new_transaction():
 
         acc = get_accessible_account_or_404(request.form.get("account_id"), current_user, permission="write")
         kind = request.form["kind"]  # expense | income
-        amount = Decimal(request.form["amount"].replace(",", "."))
+        try:
+            amount = parse_decimal(request.form.get("amount"))
+            tx_date = _parse_date(request.form["date"], date.today())
+        except ValueError:
+            flash(g._("invalid_transaction_data"), "danger")
+            return render_template(
+                "transaction_form.html",
+                transaction=None,
+                accounts=accounts,
+                categories=categories,
+                categories_by_owner=categories_by_owner_map,
+                preselected_account_id=preselected_account_id,
+                next_url=_safe_next(request.form.get("next")),
+            )
         if kind == "expense":
             amount = -abs(amount)
         else:
             amount = abs(amount)
-        tx_date = _parse_date(request.form["date"], date.today())
         tx = Transaction(
             user_id=acc.user_id,
             account_id=acc.id,
@@ -235,12 +247,24 @@ def edit_transaction(tx_id):
 
         acc = get_accessible_account_or_404(request.form.get("account_id"), current_user, permission="write")
         kind = request.form["kind"]
-        amount = Decimal(request.form["amount"].replace(",", "."))
+        try:
+            amount = parse_decimal(request.form.get("amount"))
+            tx_date = _parse_date(request.form["date"], tx.date)
+        except ValueError:
+            flash(g._("invalid_transaction_data"), "danger")
+            return render_template(
+                "transaction_form.html",
+                transaction=tx,
+                accounts=accounts,
+                categories=categories,
+                categories_by_owner=categories_by_owner_map,
+                next_url=_safe_next(request.form.get("next")),
+            )
         amount = -abs(amount) if kind == "expense" else abs(amount)
         tx.account_id = acc.id
         tx.user_id = acc.user_id
         tx.category_id = request.form.get("category_id") or None
-        tx.date = _parse_date(request.form["date"], tx.date)
+        tx.date = tx_date
         tx.budget_month = _parse_budget_month(request.form.get("budget_month"), tx.date)
         tx.amount = amount
         tx.description = request.form.get("description", "").strip()
@@ -265,6 +289,17 @@ def edit_transaction(tx_id):
         categories_by_owner=categories_by_owner_map,
         next_url=_safe_next(request.args.get("next")),
     )
+
+
+@bp.route("/<tx_id>/toggle-reviewed", methods=["POST"])
+@login_required
+def toggle_reviewed(tx_id):
+    tx = Transaction.query.filter_by(id=tx_id).first_or_404()
+    if account_access(tx.account, current_user) is None:
+        abort(404)
+    tx.reviewed = not tx.reviewed
+    db.session.commit()
+    return {"reviewed": tx.reviewed}
 
 
 @bp.route("/<tx_id>/delete", methods=["POST"])

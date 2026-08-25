@@ -113,7 +113,7 @@
           {{ t.description }}
           {% endif %}
         </td>
-        <td class="col-check"><input type="checkbox"></td>
+        <td class="col-check"><input type="checkbox" {{ 'checked' if t.reviewed else '' }} data-toggle-url="{{ url_for('transactions.toggle_reviewed', tx_id=t.id) }}"></td>
         <td data-label="{{ _('amount') }}" class="{{ 'amount-positive' if t.amount >= 0 else 'amount-negative' }}">{{ "%.2f"|format(t.amount) }} {{ t.account.currency }}</td>
         <td>
           {% if t.is_transfer %}
@@ -156,7 +156,7 @@
       <tr>
         <td data-label="{{ _('date') }}">{{ t.date.strftime('%d/%m/%Y') }}{% if t.budget_month != t.date.replace(day=1) %} <span class="muted" title="{{ _('budget_month') }}">→ {{ month_name(locale, t.budget_month.month) }} {{ t.budget_month.year }}</span>{% endif %}</td>
         <td data-label="{{ _('description') }}">{{ t.description or '—' }}</td>
-        <td class="col-check"><input type="checkbox"></td>
+        <td class="col-check"><input type="checkbox" {{ 'checked' if t.reviewed else '' }} data-toggle-url="{{ url_for('transactions.toggle_reviewed', tx_id=t.id) }}"></td>
         <td data-label="{{ _('amount') }}" class="{{ 'amount-positive' if t.amount >= 0 else 'amount-negative' }}">{{ "%.2f"|format(t.amount) }} {{ t.account.currency }}</td>
         <td data-label="{{ _('category') }}">
           {% if t.is_transfer %}

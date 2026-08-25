@@ -1,13 +1,18 @@
 import uuid
 from datetime import date, datetime
-from decimal import Decimal
 
 from flask import Blueprint, render_template, redirect, url_for, request, flash, g, abort
 from flask_login import login_required, current_user
 
 from app.extensions import db
 from app.models import Transaction, Account
-from app.utils import safe_next, accessible_account_ids, account_access, get_accessible_account_or_404
+from app.utils import (
+    safe_next,
+    accessible_account_ids,
+    account_access,
+    get_accessible_account_or_404,
+    parse_decimal,
+)
 
 bp = Blueprint("transfers", __name__, url_prefix="/transfers")
 
@@ -46,9 +51,13 @@ def new_transfer():
             flash(g._("transfer_accounts_must_differ"), "danger")
             return redirect(next_url or url_for("transfers.new_transfer"))
 
-        amount_sent = abs(Decimal(request.form["amount_sent"].replace(",", ".")))
-        amount_received = abs(Decimal(request.form["amount_received"].replace(",", ".")))
-        d = _parse_date(request.form["date"], date.today())
+        try:
+            amount_sent = abs(parse_decimal(request.form.get("amount_sent")))
+            amount_received = abs(parse_decimal(request.form.get("amount_received")))
+            d = _parse_date(request.form["date"], date.today())
+        except ValueError:
+            flash(g._("invalid_transaction_data"), "danger")
+            return redirect(next_url or url_for("transfers.new_transfer"))
         budget_month = _parse_budget_month(request.form.get("budget_month"), d)
         description = request.form.get("description", "").strip() or g._("transfer")
 
@@ -118,9 +127,13 @@ def edit_transfer(group_id):
             flash(g._("transfer_accounts_must_differ"), "danger")
             return redirect(next_url or url_for("transfers.edit_transfer", group_id=group_id))
 
-        amount_sent = abs(Decimal(request.form["amount_sent"].replace(",", ".")))
-        amount_received = abs(Decimal(request.form["amount_received"].replace(",", ".")))
-        d = _parse_date(request.form["date"], out_tx.date)
+        try:
+            amount_sent = abs(parse_decimal(request.form.get("amount_sent")))
+            amount_received = abs(parse_decimal(request.form.get("amount_received")))
+            d = _parse_date(request.form["date"], out_tx.date)
+        except ValueError:
+            flash(g._("invalid_transaction_data"), "danger")
+            return redirect(next_url or url_for("transfers.edit_transfer", group_id=group_id))
         budget_month = _parse_budget_month(request.form.get("budget_month"), d)
         description = request.form.get("description", "").strip() or g._("transfer")
 
