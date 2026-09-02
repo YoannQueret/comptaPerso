@@ -1,0 +1,20 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="card" style="max-width:400px;margin:3rem auto;">
+  <h1>{{ _("profile") }}</h1>
+  <form method="post">
+  <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+    <div class="form-group">
+      <label>{{ _("timezone_label") }}</label>
+      <select name="timezone">
+        {% for tz in timezones %}
+        <option value="{{ tz }}" {{ 'selected' if current_user.timezone == tz else '' }}>{{ tz }}</option>
+        {% endfor %}
+      </select>
+      <p class="muted">{{ _("timezone_hint") }}</p>
+    </div>
+    <button class="btn" type="submit">{{ _("save") }}</button>
+    <a class="btn btn-secondary" href="{{ url_for('main.dashboard') }}">{{ _("cancel") }}</a>
+  </form>
+</div>
+{% endblock %}

@@ -1,5 +1,5 @@
 import uuid
-from datetime import date, datetime, timedelta
+from datetime import datetime, timedelta
 
 from flask import Blueprint, render_template, redirect, url_for, request, flash, g, abort
 from flask_login import login_required, current_user
@@ -17,6 +17,7 @@ from app.utils import (
     account_access,
     get_accessible_account_or_404,
     parse_decimal,
+    today_for_user,
 )
 
 bp = Blueprint("recurring", __name__)
@@ -101,7 +102,7 @@ def list_recurring():
         categories_by_owner=categories_by_owner_map,
         periodicities=PERIODICITIES,
         preselected_account_id=preselected_account_id,
-        today=date.today(),
+        today=today_for_user(current_user),
     )
 
 
@@ -175,7 +176,7 @@ def new_recurring():
         if is_transfer:
             to_account = get_accessible_account_or_404(to_account_id, current_user, permission="write")
 
-        start = _parse_date(request.form["start_date"], date.today())
+        start = _parse_date(request.form["start_date"], today_for_user(current_user))
         rule = RecurringRule(
             user_id=acc.user_id,
             account_id=acc.id,
@@ -416,7 +417,7 @@ def monthly_budget(year, month):
         active_accounts=active_accounts,
         categories=categories,
         categories_by_owner=categories_by_owner_map,
-        today=date.today(),
+        today=today_for_user(current_user),
         carryover=carryover,
         net_with_carryover=net_with_carryover,
         prev_year=prev_month.year,
@@ -450,7 +451,7 @@ def _rule_occurrences_in_range(rule, start, end):
 def monthly_budget_chart_data(year, month):
     start, end = month_bounds(year, month)
     account_id = resolve_account_id(current_user, request.args.get("account_id"))
-    today = date.today()
+    today = today_for_user(current_user)
     ids = accessible_account_ids(current_user)
 
     account = Account.query.filter(Account.id == account_id, Account.id.in_(ids)).first() if account_id else None
@@ -497,20 +498,30 @@ def monthly_budget_chart_data(year, month):
         ]
     events.sort(key=lambda e: e["date"])
 
+    # group same-day events into one point — several transactions landing on
+    # the same date would otherwise sit at the exact same X position anyway,
+    # and the tooltip needs all of that day's operations together, not just
+    # whichever one happened to be nearest.
+    events_by_date = {}
+    for event in events:
+        events_by_date.setdefault(event["date"], []).append(event)
+
     running_balance = _carryover_balance(account_id, start)
     points = [{
         "date": (start - timedelta(days=1)).isoformat(),
         "balance": round(running_balance, 2),
-        "label": None,
+        "items": [],
         "realized": True,
     }]
-    for event in events:
-        running_balance += event["amount"]
+    for event_date in sorted(events_by_date):
+        day_events = events_by_date[event_date]
+        for event in day_events:
+            running_balance += event["amount"]
         points.append({
-            "date": event["date"].isoformat(),
+            "date": event_date.isoformat(),
             "balance": round(running_balance, 2),
-            "label": event["label"],
-            "realized": event.get("realized", event["date"] <= today),
+            "items": [{"label": e["label"], "amount": e["amount"]} for e in day_events],
+            "realized": event_date <= today,
         })
 
     # extend the line flat to the end of the month so the X axis always spans
@@ -519,7 +530,7 @@ def monthly_budget_chart_data(year, month):
         points.append({
             "date": end.isoformat(),
             "balance": points[-1]["balance"],
-            "label": None,
+            "items": [],
             "realized": end <= today,
         })
 
@@ -638,8 +649,9 @@ def ignore_occurrence(rule_id):
     db.session.commit()
     flash(g._("occurrence_ignored"), "success")
 
-    redirect_year = request.form.get("year", type=int) or date.today().year
-    redirect_month = request.form.get("month", type=int) or date.today().month
+    redirect_today = today_for_user(current_user)
+    redirect_year = request.form.get("year", type=int) or redirect_today.year
+    redirect_month = request.form.get("month", type=int) or redirect_today.month
     redirect_account_id = request.form.get("account_id") or None
     return redirect(
         url_for(

@@ -1,4 +1,5 @@
 from datetime import datetime
+from zoneinfo import available_timezones
 
 from itsdangerous import URLSafeTimedSerializer, BadSignature, SignatureExpired
 
@@ -10,6 +11,7 @@ from app.mail import send_email
 from app.config import Config
 from app.models import User, AccountType, Currency, Invitation
 from app.translations import DEFAULT_ACCOUNT_TYPE_NAMES
+from app.utils import COMMON_TIMEZONES
 
 bp = Blueprint("auth", __name__)
 
@@ -202,6 +204,30 @@ def accept_invite(token):
         return redirect(url_for("main.dashboard"))
 
     return render_template("accept_invite.html", token=token, email=email)
+
+
+def _timezone_choices():
+    # always include the user's current value, even if it's outside the
+    # curated list (e.g. set some other way), so the form never silently
+    # drops it
+    if current_user.timezone and current_user.timezone not in COMMON_TIMEZONES:
+        return [current_user.timezone] + COMMON_TIMEZONES
+    return COMMON_TIMEZONES
+
+
+@bp.route("/profile", methods=["GET", "POST"])
+@login_required
+def profile():
+    if request.method == "POST":
+        tz_name = request.form.get("timezone", "")
+        if tz_name not in available_timezones():
+            flash(g._("profile_invalid_timezone"), "danger")
+            return render_template("profile.html", timezones=_timezone_choices())
+        current_user.timezone = tz_name
+        db.session.commit()
+        flash(g._("profile_updated"), "success")
+        return redirect(url_for("auth.profile"))
+    return render_template("profile.html", timezones=_timezone_choices())
 
 
 @bp.route("/change-password", methods=["GET", "POST"])

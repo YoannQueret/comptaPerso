@@ -348,7 +348,7 @@ function renderBalanceChart(container, data) {
 
   var points = data.points.map(function(p) {
     var d = new Date(p.date + "T00:00:00");
-    return { date: p.date, dateObj: d, balance: p.balance, label: p.label, realized: p.realized };
+    return { date: p.date, dateObj: d, balance: p.balance, items: p.items || [], realized: p.realized };
   });
 
   var xMin = points[0].dateObj.getTime();
@@ -372,7 +372,7 @@ function renderBalanceChart(container, data) {
     return {
       x: xPos(p.dateObj.getTime()),
       y: yPos(p.balance),
-      date: p.date, dateObj: p.dateObj, balance: p.balance, label: p.label, realized: p.realized
+      date: p.date, dateObj: p.dateObj, balance: p.balance, items: p.items, realized: p.realized
     };
   });
 
@@ -463,17 +463,30 @@ function renderBalanceChart(container, data) {
     tooltip.innerHTML = "";
     var strong = document.createElement("strong");
     strong.textContent = nearest.balance.toFixed(2) + " " + data.currency;
-    var small = document.createElement("div");
-    small.className = "muted";
-    var dateLabel = nearest.dateObj.toLocaleDateString();
-    small.textContent = nearest.label ? (dateLabel + " — " + nearest.label) : dateLabel;
     tooltip.appendChild(strong);
-    tooltip.appendChild(small);
+
+    var dateLine = document.createElement("div");
+    dateLine.className = "muted";
+    dateLine.textContent = nearest.dateObj.toLocaleDateString();
+    tooltip.appendChild(dateLine);
+
+    nearest.items.forEach(function(item) {
+      var row = document.createElement("div");
+      row.className = "chart-tooltip-item";
+      var labelSpan = document.createElement("span");
+      labelSpan.textContent = item.label;
+      var amountSpan = document.createElement("span");
+      amountSpan.className = item.amount >= 0 ? "amount-positive" : "amount-negative";
+      amountSpan.textContent = (item.amount >= 0 ? "+" : "") + item.amount.toFixed(2);
+      row.appendChild(labelSpan);
+      row.appendChild(amountSpan);
+      tooltip.appendChild(row);
+    });
 
     var px = (nearest.x / width) * rect.width;
     var py = (nearest.y / height) * rect.height;
-    tooltip.style.left = Math.min(px + 12, rect.width - 150) + "px";
-    tooltip.style.top = Math.max(py - 44, 0) + "px";
+    tooltip.style.left = Math.min(px + 12, rect.width - 180) + "px";
+    tooltip.style.top = Math.max(py - 22 - tooltip.offsetHeight, 0) + "px";
   });
   svgEl.addEventListener("pointerleave", function() {
     crosshair.setAttribute("visibility", "hidden");

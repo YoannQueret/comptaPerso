@@ -7,7 +7,7 @@ from sqlalchemy import extract
 
 from app.extensions import db
 from app.models import Transaction, Category, Account
-from app.utils import resolve_account_id, accessible_account_ids
+from app.utils import resolve_account_id, accessible_account_ids, today_for_user
 
 bp = Blueprint("reports", __name__, url_prefix="/reports")
 
@@ -58,7 +58,7 @@ def _category_totals(account_id, date_from, date_to):
 def index():
     account_id = resolve_account_id(current_user, request.args.get("account_id"))
 
-    today = date.today()
+    today = today_for_user(current_user)
     default_a_from = today.replace(day=1)
     default_a_to = today
 

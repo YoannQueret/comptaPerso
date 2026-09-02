@@ -1,7 +1,64 @@
 import re
-from datetime import date
+from datetime import date, datetime, timezone
 from decimal import Decimal, InvalidOperation
+from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 from dateutil.relativedelta import relativedelta
+
+# curated for a manageable <select>, rather than every ~600 IANA zones —
+# one representative city per UTC offset/region a user is realistically in.
+COMMON_TIMEZONES = [
+    "UTC",
+    "Europe/London",
+    "Europe/Paris",
+    "Europe/Zurich",
+    "Europe/Berlin",
+    "Europe/Madrid",
+    "Europe/Rome",
+    "Europe/Lisbon",
+    "Europe/Athens",
+    "Europe/Moscow",
+    "America/New_York",
+    "America/Chicago",
+    "America/Denver",
+    "America/Los_Angeles",
+    "America/Sao_Paulo",
+    "Africa/Cairo",
+    "Africa/Johannesburg",
+    "Asia/Dubai",
+    "Asia/Kolkata",
+    "Asia/Shanghai",
+    "Asia/Tokyo",
+    "Asia/Singapore",
+    "Australia/Sydney",
+    "Pacific/Auckland",
+]
+
+
+def _user_zoneinfo(user):
+    tz_name = (user.timezone if user and getattr(user, "timezone", None) else "UTC")
+    try:
+        return ZoneInfo(tz_name)
+    except ZoneInfoNotFoundError:
+        return ZoneInfo("UTC")
+
+
+def to_user_timezone(dt, user):
+    """Convert a naive UTC datetime (as stored throughout this app) to
+    `user`'s configured display timezone. Returns None if `dt` is None."""
+    if dt is None:
+        return None
+    return dt.replace(tzinfo=timezone.utc).astimezone(_user_zoneinfo(user))
+
+
+def today_for_user(user):
+    """Today's calendar date in `user`'s configured timezone — independent of
+    the server's own timezone/locale. Matters right around midnight: if the
+    server runs in UTC and the user is in Europe/Paris (ahead of UTC), their
+    local day has already turned over while the server's has not yet, and
+    every "today" comparison in the app (default dates, the real/current
+    balance, "future transaction" highlighting, overdue rules...) must use
+    the user's day, not the server's."""
+    return datetime.now(timezone.utc).astimezone(_user_zoneinfo(user)).date()
 
 
 def advance_date(d: date, periodicity: str, interval: int = 1) -> date:

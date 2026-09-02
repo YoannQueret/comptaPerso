@@ -1,6 +1,6 @@
 import os
 import uuid
-from datetime import datetime, date
+from datetime import datetime
 
 from flask import (
     Blueprint, render_template, redirect, url_for, request, flash, g,
@@ -19,6 +19,7 @@ from app.utils import (
     accessible_account_ids,
     account_access,
     get_accessible_account_or_404,
+    today_for_user,
 )
 
 bp = Blueprint("transactions", __name__, url_prefix="/transactions")
@@ -132,7 +133,7 @@ def list_transactions():
         filters=request.args,
         transfer_counterparts=counterparts,
         sort=sort,
-        today=date.today(),
+        today=today_for_user(current_user),
         selected_account_id=account_id,
         selected_account=selected_account,
         can_add_here=can_add_here,
@@ -175,7 +176,7 @@ def new_transaction():
         kind = request.form["kind"]  # expense | income
         try:
             amount = parse_decimal(request.form.get("amount"))
-            tx_date = _parse_date(request.form["date"], date.today())
+            tx_date = _parse_date(request.form["date"], today_for_user(current_user))
         except ValueError:
             flash(g._("invalid_transaction_data"), "danger")
             return render_template(

@@ -31,8 +31,8 @@
           <span class="badge-kind badge-kind-both">{{ _("inactive") }}</span>
           {% endif %}
         </td>
-        <td data-label="{{ _('last_login') }}">{{ u.last_login_at.strftime('%d/%m/%Y %H:%M') if u.last_login_at else '—' }}</td>
-        <td data-label="{{ _('last_seen') }}">{{ u.last_seen_at.strftime('%d/%m/%Y %H:%M') if u.last_seen_at else '—' }}</td>
+        <td data-label="{{ _('last_login') }}">{{ (u.last_login_at|localtime).strftime('%d/%m/%Y %H:%M') if u.last_login_at else '—' }}</td>
+        <td data-label="{{ _('last_seen') }}">{{ (u.last_seen_at|localtime).strftime('%d/%m/%Y %H:%M') if u.last_seen_at else '—' }}</td>
         <td data-label="{{ _('created_at') }}">{{ u.created_at.strftime('%d/%m/%Y') if u.created_at else '—' }}</td>
         <td>
           {% if u.id != current_user.id %}

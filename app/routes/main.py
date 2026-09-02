@@ -1,10 +1,15 @@
-from datetime import date
 from flask import Blueprint, render_template
 from flask_login import login_required, current_user
 
 from app.extensions import db
 from app.models import Account, Transaction, RecurringRule
-from app.utils import month_bounds, resolve_account_id, accessible_account_ids, account_access
+from app.utils import (
+    month_bounds,
+    resolve_account_id,
+    accessible_account_ids,
+    account_access,
+    today_for_user,
+)
 
 bp = Blueprint("main", __name__)
 
@@ -22,7 +27,7 @@ def dashboard():
         .limit(10)
         .all()
     )
-    today = date.today()
+    today = today_for_user(current_user)
     # Same scope as the monthly budget page it links to (resolve_account_id
     # always narrows to a single account there), so the count shown here
     # matches exactly what the user will see after clicking through.

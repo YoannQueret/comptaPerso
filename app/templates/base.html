@@ -46,6 +46,7 @@
     <details class="navbar-dropdown navbar-dropdown-right" name="navbar-dropdown">
       <summary>{{ current_user.name }}</summary>
       <div class="navbar-dropdown-menu">
+        <a href="{{ url_for('auth.profile') }}">{{ _("profile") }}</a>
         <a href="{{ url_for('auth.change_password') }}">{{ _("change_password") }}</a>
         <a href="{{ url_for('auth.logout') }}">{{ _("logout") }}</a>
       </div>

@@ -5,6 +5,7 @@ import shutil
 from datetime import datetime, timedelta
 
 from flask import Flask, session, g, render_template, redirect, url_for, flash, request
+from flask_login import current_user
 from flask_wtf import CSRFProtect
 from flask_wtf.csrf import CSRFError
 from flask_migrate import upgrade as migrate_upgrade
@@ -17,6 +18,7 @@ from app.translations import (
     PERIODICITY_LABEL_KEYS,
     KIND_LABEL_KEYS,
 )
+from app.utils import to_user_timezone, today_for_user
 
 csrf = CSRFProtect()
 
@@ -92,6 +94,9 @@ def create_app():
     app.jinja_env.filters["kind_label"] = (
         lambda value: g._(KIND_LABEL_KEYS.get(value, value))
     )
+    app.jinja_env.filters["localtime"] = (
+        lambda dt: to_user_timezone(dt, current_user)
+    )
 
     from app.models import User
 
@@ -155,10 +160,11 @@ def create_app():
     def inject_globals():
         from flask_login import current_user
         from datetime import date
+        now = today_for_user(current_user) if current_user.is_authenticated else date.today()
         return dict(_=g.get("_", get_translator(Config.DEFAULT_LOCALE)),
                     locale=g.get("locale", Config.DEFAULT_LOCALE),
                     current_user=current_user,
-                    now=date.today(),
+                    now=now,
                     allow_registration=app.config["ALLOW_REGISTRATION"],
                     month_name=_month_name,
                     app_version=APP_VERSION)

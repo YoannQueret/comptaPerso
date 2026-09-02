@@ -18,6 +18,9 @@ class User(db.Model, UserMixin):
     name = db.Column(db.String(120), nullable=False)
     password_hash = db.Column(db.String(255), nullable=False)
     locale = db.Column(db.String(5), default="fr")
+    # IANA timezone name (e.g. "Europe/Zurich"), used to display datetimes
+    # (stored as naive UTC) in the user's own local time.
+    timezone = db.Column(db.String(50), default="UTC")
     default_account_id = db.Column(
         db.String(36),
         db.ForeignKey("accounts.id", use_alter=True, name="fk_users_default_account_id"),
@@ -92,10 +95,16 @@ class Account(db.Model):
 
     @property
     def current_balance(self):
-        """Real balance as of today: excludes any transaction dated in the future."""
+        """Real balance as of today, in the *viewing* user's own timezone —
+        not the server's, so the day rolls over for them at their own
+        midnight regardless of how the server is configured."""
+        from flask_login import current_user
+        from app.utils import today_for_user
+
+        today = today_for_user(current_user) if current_user.is_authenticated else date.today()
         total = db.session.query(db.func.coalesce(db.func.sum(Transaction.amount), 0)).filter(
             Transaction.account_id == self.id,
-            Transaction.date <= date.today(),
+            Transaction.date <= today,
         ).scalar()
         return float(self.initial_balance or 0) + float(total or 0)
 

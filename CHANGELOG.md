@@ -5,6 +5,22 @@ All notable changes to this project are documented in this file.
 The format loosely follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 Versions are tracked in the `VERSION` file at the repo root.
 
+## [0.4.2] - 2026-09-02
+
+### Added
+- A "Profile" submenu (top-right user menu) to set your display timezone.
+  It's used to show dates/times (last login, invitations...) in your own
+  local time, and — more importantly — to determine "today" throughout the
+  app (the real/current balance, "future transaction" highlighting, default
+  dates, overdue rules, report periods) independently of the server's own
+  timezone. A user ahead of the server (e.g. server in UTC, user in
+  Europe/Paris) now sees their day roll over at their own local midnight,
+  not the server's.
+- The balance chart's hover tooltip now lists each operation's own amount
+  alongside its label, not just the running balance. Several transactions
+  landing on the same day are grouped into a single tooltip instead of only
+  showing whichever one the mouse happened to land nearest to.
+
 ## [0.4.1] - 2026-08-26
 
 ### Added

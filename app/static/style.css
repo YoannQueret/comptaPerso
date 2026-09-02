@@ -283,6 +283,14 @@ form.inline { display: inline; }
   z-index: 5;
 }
 .chart-tooltip strong { display: block; color: var(--text); }
+.chart-tooltip-item {
+  display: flex;
+  justify-content: space-between;
+  gap: 0.75rem;
+  margin-top: 0.2rem;
+  padding-top: 0.2rem;
+  border-top: 1px solid var(--border);
+}
 
 .app-footer {
   text-align: center;

@@ -1,5 +1,5 @@
 import uuid
-from datetime import date, datetime
+from datetime import datetime
 
 from flask import Blueprint, render_template, redirect, url_for, request, flash, g, abort
 from flask_login import login_required, current_user
@@ -12,6 +12,7 @@ from app.utils import (
     account_access,
     get_accessible_account_or_404,
     parse_decimal,
+    today_for_user,
 )
 
 bp = Blueprint("transfers", __name__, url_prefix="/transfers")
@@ -54,7 +55,7 @@ def new_transfer():
         try:
             amount_sent = abs(parse_decimal(request.form.get("amount_sent")))
             amount_received = abs(parse_decimal(request.form.get("amount_received")))
-            d = _parse_date(request.form["date"], date.today())
+            d = _parse_date(request.form["date"], today_for_user(current_user))
         except ValueError:
             flash(g._("invalid_transaction_data"), "danger")
             return redirect(next_url or url_for("transfers.new_transfer"))
