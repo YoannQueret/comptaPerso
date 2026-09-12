@@ -1,6 +1,7 @@
+import base64
 import os
 import uuid
-from datetime import datetime
+from datetime import datetime, timedelta
 
 from flask import (
     Blueprint, render_template, redirect, url_for, request, flash, g,
@@ -10,6 +11,7 @@ from flask_login import login_required, current_user
 
 from app.extensions import db
 from app.models import Transaction, Account, Category
+from app.ofx_reconcile import parse_ofx_bytes, match_ofx_transactions, RECONCILE_DATE_TOLERANCE_DAYS
 from app.utils import (
     resolve_account_id,
     ordered_categories,
@@ -325,3 +327,110 @@ def view_attachment(tx_id):
     if not tx.attachment_filename:
         abort(404)
     return send_from_directory(current_app.config["ATTACHMENTS_DIR"], tx.attachment_filename)
+
+
+def _apply_reconcile_action(action, form, acc, ofx_rows):
+    """Mutates the DB according to one reconciliation row action. `ofx_rows`
+    is the freshly re-parsed list from the resubmitted OFX content, so
+    `ofx_index` always refers to the same row it did when the button was
+    rendered."""
+    if action == "add":
+        try:
+            index = int(form.get("ofx_index", ""))
+            row = ofx_rows[index]
+        except (ValueError, IndexError):
+            return
+        tx = Transaction(
+            user_id=acc.user_id,
+            account_id=acc.id,
+            category_id=form.get("category_id") or None,
+            date=row["date"],
+            budget_month=row["date"].replace(day=1),
+            amount=row["amount"],
+            description=row["description"],
+        )
+        db.session.add(tx)
+        db.session.commit()
+        flash(g._("transaction_saved"), "success")
+
+    elif action == "delete":
+        tx = Transaction.query.filter_by(id=form.get("tx_id"), account_id=acc.id).first()
+        if tx:
+            _delete_attachment(tx.attachment_filename)
+            db.session.delete(tx)
+            db.session.commit()
+            flash(g._("transaction_deleted"), "success")
+
+    elif action == "sync_date":
+        tx = Transaction.query.filter_by(id=form.get("tx_id"), account_id=acc.id).first()
+        try:
+            index = int(form.get("ofx_index", ""))
+            row = ofx_rows[index]
+        except (ValueError, IndexError):
+            row = None
+        if tx and row:
+            tx.date = row["date"]
+            db.session.commit()
+            flash(g._("reconcile_date_updated"), "success")
+
+
+@bp.route("/reconcile", methods=["GET", "POST"])
+@login_required
+def reconcile():
+    account_id = resolve_account_id(current_user, request.values.get("account_id"))
+    acc = get_accessible_account_or_404(account_id, current_user, permission="write")
+
+    error = None
+    ofx_rows = None
+    ofx_content_b64 = request.form.get("ofx_content")
+
+    if request.method == "POST":
+        upload = request.files.get("file")
+        raw = None
+        if upload and upload.filename:
+            raw = upload.read()
+            ofx_content_b64 = base64.b64encode(raw).decode("ascii")
+        elif ofx_content_b64:
+            raw = base64.b64decode(ofx_content_b64)
+
+        if raw is not None:
+            try:
+                ofx_rows = parse_ofx_bytes(raw)
+            except ValueError:
+                error = g._("ofx_parse_error")
+                ofx_content_b64 = None
+
+        action = request.form.get("action")
+        if ofx_rows is not None and action:
+            _apply_reconcile_action(action, request.form, acc, ofx_rows)
+
+    matches, missing, extra = [], [], []
+    if ofx_rows is not None:
+        if ofx_rows:
+            min_date = min(r["date"] for r in ofx_rows) - timedelta(days=RECONCILE_DATE_TOLERANCE_DAYS)
+            max_date = max(r["date"] for r in ofx_rows) + timedelta(days=RECONCILE_DATE_TOLERANCE_DAYS)
+            db_txs = Transaction.query.filter(
+                Transaction.account_id == acc.id,
+                Transaction.date >= min_date,
+                Transaction.date <= max_date,
+            ).all()
+        else:
+            db_txs = []
+        raw_matches, missing_idx, extra = match_ofx_transactions(ofx_rows, db_txs)
+        matches = [
+            {"index": i, "row": ofx_rows[i], "tx": tx, "date_diff": diff}
+            for i, tx, diff in raw_matches
+        ]
+        missing = [{"index": i, "row": ofx_rows[i]} for i in missing_idx]
+
+    return render_template(
+        "reconcile.html",
+        account=acc,
+        ofx_content=ofx_content_b64,
+        matches=matches,
+        missing=missing,
+        extra=extra,
+        error=error,
+        uploaded=ofx_rows is not None,
+        categories=ordered_categories(acc.user_id),
+    )

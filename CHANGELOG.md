@@ -5,6 +5,16 @@ All notable changes to this project are documented in this file.
 The format loosely follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 Versions are tracked in the `VERSION` file at the repo root.
 
+## [0.4.4] - 2026-09-12
+
+### Added
+- Bank statement reconciliation: upload an OFX/QFX file from the transactions
+  page ("🏦 Rapprochement OFX") to compare it against what's recorded for the
+  selected account. Matches on exact amount + date within ±7 days, then lets
+  you fix a mismatched date, add a missing operation (picking its category
+  right away), or delete an extra one — one click at a time, re-checking the
+  same uploaded file after each action.
+
 ## [0.4.3] - 2026-09-12
 
 ### Added

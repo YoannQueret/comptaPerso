@@ -1,0 +1,122 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="toolbar">
+  <h1>{{ _("reconcile") }} — {{ account.name }} ({{ account.currency }})</h1>
+  <a class="btn btn-secondary" href="{{ url_for('transactions.list_transactions', account_id=account.id) }}">{{ _("back") }}</a>
+</div>
+
+{% if error %}
+<div class="alert alert-danger">{{ error }}</div>
+{% endif %}
+
+{% if uploaded %}
+<div class="card">
+  <p>
+    {{ _("reconcile_summary") % {
+      "matched": matches|length,
+      "missing": missing|length,
+      "extra": extra|length,
+    } }}
+  </p>
+</div>
+
+{% set date_mismatches = matches|selectattr('date_diff')|list %}
+
+<div class="card">
+  <h2>{{ _("reconcile_date_mismatches") }}</h2>
+  {% for m in date_mismatches %}
+  <form method="post" action="{{ url_for('transactions.reconcile', account_id=account.id) }}" id="sync-form-{{ m.index }}">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+    <input type="hidden" name="ofx_content" value="{{ ofx_content }}">
+    <input type="hidden" name="action" value="sync_date">
+    <input type="hidden" name="ofx_index" value="{{ m.index }}">
+    <input type="hidden" name="tx_id" value="{{ m.tx.id }}">
+  </form>
+  {% endfor %}
+  <div class="table-wrap">
+  <table class="table-responsive">
+    <thead><tr><th>{{ _("ofx_date") }}</th><th>{{ _("recorded_date") }}</th><th>{{ _("amount") }}</th><th>{{ _("description") }}</th><th></th></tr></thead>
+    <tbody>
+      {% for m in date_mismatches %}
+      <tr>
+        <td data-label="{{ _('ofx_date') }}">{{ m.row.date.strftime('%d/%m/%Y') }}</td>
+        <td data-label="{{ _('recorded_date') }}">{{ m.tx.date.strftime('%d/%m/%Y') }}</td>
+        <td data-label="{{ _('amount') }}" class="{{ 'amount-positive' if m.row.amount >= 0 else 'amount-negative' }}">{{ "%.2f"|format(m.row.amount) }}</td>
+        <td data-label="{{ _('description') }}">{{ m.tx.description or m.row.description or '—' }}</td>
+        <td><button form="sync-form-{{ m.index }}" class="btn btn-sm" type="submit">{{ _("reconcile_sync_date") }}</button></td>
+      </tr>
+      {% else %}
+      <tr><td colspan="5">{{ _("reconcile_no_mismatches") }}</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+  </div>
+</div>
+
+<div class="card">
+  <h2>{{ _("reconcile_missing") }}</h2>
+  {% for item in missing %}
+  <form method="post" action="{{ url_for('transactions.reconcile', account_id=account.id) }}" id="add-form-{{ item.index }}">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+    <input type="hidden" name="ofx_content" value="{{ ofx_content }}">
+    <input type="hidden" name="action" value="add">
+    <input type="hidden" name="ofx_index" value="{{ item.index }}">
+  </form>
+  {% endfor %}
+  <div class="table-wrap">
+  <table class="table-responsive">
+    <thead><tr><th>{{ _("date") }}</th><th>{{ _("amount") }}</th><th>{{ _("description") }}</th><th>{{ _("category") }}</th><th></th></tr></thead>
+    <tbody>
+      {% for item in missing %}
+      <tr>
+        <td data-label="{{ _('date') }}">{{ item.row.date.strftime('%d/%m/%Y') }}</td>
+        <td data-label="{{ _('amount') }}" class="{{ 'amount-positive' if item.row.amount >= 0 else 'amount-negative' }}">{{ "%.2f"|format(item.row.amount) }}</td>
+        <td data-label="{{ _('description') }}">{{ item.row.description or '—' }}</td>
+        <td data-label="{{ _('category') }}">
+          <select form="add-form-{{ item.index }}" name="category_id">
+            <option value="">—</option>
+            {% for cat in categories %}
+            <option value="{{ cat.id }}">{{ cat.full_name }}</option>
+            {% endfor %}
+          </select>
+        </td>
+        <td><button form="add-form-{{ item.index }}" class="btn btn-sm" type="submit">{{ _("reconcile_add") }}</button></td>
+      </tr>
+      {% else %}
+      <tr><td colspan="5">{{ _("reconcile_no_missing") }}</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+  </div>
+</div>
+
+<div class="card">
+  <h2>{{ _("reconcile_extra") }}</h2>
+  {% for tx in extra %}
+  <form method="post" action="{{ url_for('transactions.reconcile', account_id=account.id) }}" id="delete-form-{{ tx.id }}" onsubmit="return confirm('{{ _("confirm_delete_transaction") }}');">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+    <input type="hidden" name="ofx_content" value="{{ ofx_content }}">
+    <input type="hidden" name="action" value="delete">
+    <input type="hidden" name="tx_id" value="{{ tx.id }}">
+  </form>
+  {% endfor %}
+  <div class="table-wrap">
+  <table class="table-responsive">
+    <thead><tr><th>{{ _("date") }}</th><th>{{ _("amount") }}</th><th>{{ _("description") }}</th><th></th></tr></thead>
+    <tbody>
+      {% for tx in extra %}
+      <tr>
+        <td data-label="{{ _('date') }}">{{ tx.date.strftime('%d/%m/%Y') }}</td>
+        <td data-label="{{ _('amount') }}" class="{{ 'amount-positive' if tx.amount >= 0 else 'amount-negative' }}">{{ "%.2f"|format(tx.amount) }}</td>
+        <td data-label="{{ _('description') }}">{{ tx.description or '—' }}</td>
+        <td><button form="delete-form-{{ tx.id }}" class="btn btn-sm btn-danger" type="submit">{{ _("delete") }}</button></td>
+      </tr>
+      {% else %}
+      <tr><td colspan="4">{{ _("reconcile_no_extra") }}</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+  </div>
+</div>
+{% endif %}
+{% endblock %}
