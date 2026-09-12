@@ -5,6 +5,18 @@ All notable changes to this project are documented in this file.
 The format loosely follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 Versions are tracked in the `VERSION` file at the repo root.
 
+## [0.4.3] - 2026-09-12
+
+### Added
+- A second visual-only checkbox next to the "reviewed" one, on the
+  transactions page and both monthly budget tables — this one resets on
+  every page reload (not persisted), for a quick per-visit tick mark
+  alongside the remembered one.
+- The monthly budget page's "other transactions this month" table now has
+  an edit button (previously only the validated-recurrences table did).
+- The account filter on the transactions page now labels a shared account
+  with its owner's name, matching the other account pickers.
+
 ## [0.4.2] - 2026-09-02
 
 ### Added

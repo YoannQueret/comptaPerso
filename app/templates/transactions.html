@@ -16,7 +16,7 @@
       <label>{{ _("account") }}</label>
       <select name="account_id" onchange="this.form.submit()">
         {% for acc in accounts %}
-        <option value="{{ acc.id }}" {{ 'selected' if selected_account_id==acc.id else '' }}>{{ acc.name }} ({{ acc.currency }})</option>
+        <option value="{{ acc.id }}" {{ 'selected' if selected_account_id==acc.id else '' }}>{{ acc.name }} ({{ acc.currency }}){% if acc.user_id != current_user.id %} — {{ _("shared_by") }} {{ acc.user.name }}{% endif %}</option>
         {% endfor %}
       </select>
       {% if selected_account %}
@@ -65,7 +65,7 @@
             {{ _("date") }} {{ '↓' if sort == 'date_desc' else '↑' }}
           </a>
         </th>
-        <th>{{ _("category") }}</th><th>{{ _("description") }}</th><th class="col-check"></th><th>{{ _("amount") }}</th><th></th>
+        <th>{{ _("category") }}</th><th>{{ _("description") }}</th><th class="col-check"></th><th class="col-check"></th><th>{{ _("amount") }}</th><th></th>
       </tr>
     </thead>
     <tbody>
@@ -84,6 +84,7 @@
         </td>
         <td data-label="{{ _('description') }}">{{ t.description or '—' }}</td>
         <td class="col-check"><input type="checkbox" {{ 'checked' if t.reviewed else '' }} data-toggle-url="{{ url_for('transactions.toggle_reviewed', tx_id=t.id) }}"></td>
+        <td class="col-check"><input type="checkbox"></td>
         <td data-label="{{ _('amount') }}" class="{{ 'amount-positive' if t.amount >= 0 else 'amount-negative' }}">{{ "%.2f"|format(t.amount) }} {{ t.account.currency }}</td>
         <td>
           <span class="attachment-slot">{%- if t.attachment_filename -%}<button type="button" class="attachment-btn" title="{{ _('view_attachment') }}" onclick="openAttachment('{{ url_for('transactions.view_attachment', tx_id=t.id) }}', '{{ t.attachment_filename.rsplit('.', 1)[-1] }}', '{{ _('open_in_new_tab') }}')">📎</button>{%- endif -%}</span>
@@ -104,7 +105,7 @@
         </td>
       </tr>
       {% else %}
-      <tr><td colspan="6">{{ _("no_data") }}</td></tr>
+      <tr><td colspan="7">{{ _("no_data") }}</td></tr>
       {% endfor %}
     </tbody>
   </table>
