@@ -23,7 +23,7 @@
       {% if selected_account %}
       <div class="muted" style="position:absolute;top:100%;left:0;margin-top:0.3rem;white-space:nowrap;">
         {{ _("balance") }}:
-        <strong class="{{ 'amount-positive' if selected_account.balance >= 0 else 'amount-negative' }}">{{ "%.2f"|format(selected_account.balance) }} {{ selected_account.currency }}</strong>
+        <strong class="{{ 'amount-positive' if selected_account.net_balance_with_carryover >= 0 else 'amount-negative' }}">{{ "%.2f"|format(selected_account.net_balance_with_carryover) }} {{ selected_account.currency }}</strong>
       </div>
       {% endif %}
     </div>

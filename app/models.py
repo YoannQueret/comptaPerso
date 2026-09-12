@@ -94,6 +94,26 @@ class Account(db.Model):
         return float(self.initial_balance or 0) + float(total or 0)
 
     @property
+    def net_balance_with_carryover(self):
+        """Same figure as "solde net (avec report)" on the monthly budget
+        page for the current month: initial balance plus every recorded
+        transaction whose budget_month is this month or earlier. Unlike
+        `balance` (which also counts transactions budget-shifted into a
+        future month) or `current_balance` (which goes by real date, not
+        budget_month), this is the one the monthly budget page itself
+        reports as the account's net position."""
+        from flask_login import current_user
+        from app.utils import today_for_user
+
+        today = today_for_user(current_user) if current_user.is_authenticated else date.today()
+        month_start = today.replace(day=1)
+        total = db.session.query(db.func.coalesce(db.func.sum(Transaction.amount), 0)).filter(
+            Transaction.account_id == self.id,
+            Transaction.budget_month <= month_start,
+        ).scalar()
+        return float(self.initial_balance or 0) + float(total or 0)
+
+    @property
     def current_balance(self):
         """Real balance as of today, in the *viewing* user's own timezone —
         not the server's, so the day rolls over for them at their own

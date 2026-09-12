@@ -1,9 +1,22 @@
 # Changelog
 
+*[Lire en français](CHANGELOG_FR.md)*
+
 All notable changes to this project are documented in this file.
 
 The format loosely follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 Versions are tracked in the `VERSION` file at the repo root.
+
+## [0.4.6] - 2026-09-12
+
+### Changed
+- The account balance shown on the transactions page now matches the
+  monthly budget page's "net balance (with carryover)" for the current
+  month, instead of the full balance including transactions budget-shifted
+  into a future month.
+
+### Added
+- CHANGELOG_FR.md: a maintained French translation of this changelog.
 
 ## [0.4.5] - 2026-09-12
 
