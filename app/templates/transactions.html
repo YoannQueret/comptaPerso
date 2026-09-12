@@ -111,6 +111,20 @@
     </tbody>
   </table>
   </div>
+  {% if total_pages > 1 %}
+  <div class="pagination">
+    {% set qs = request.args.to_dict() %}
+    {% if page > 1 %}
+    {% set discard = qs.update({'page': page - 1}) %}
+    <a href="{{ url_for('transactions.list_transactions', **qs) }}">&larr; {{ _("previous") }}</a>
+    {% endif %}
+    <span class="muted">{{ _("page_of") % {"page": page, "total": total_pages} }}</span>
+    {% if page < total_pages %}
+    {% set discard = qs.update({'page': page + 1}) %}
+    <a href="{{ url_for('transactions.list_transactions', **qs) }}">{{ _("next") }} &rarr;</a>
+    {% endif %}
+  </div>
+  {% endif %}
 </div>
 
 <dialog id="add-tx-dialog" class="modal">

@@ -26,6 +26,8 @@ from app.utils import (
 
 bp = Blueprint("transactions", __name__, url_prefix="/transactions")
 
+TRANSACTIONS_PER_PAGE = 50
+
 
 def _parse_date(s, default=None):
     if not s:
@@ -108,7 +110,15 @@ def list_transactions():
     else:
         sort = "date_desc"
         q = q.order_by(Transaction.date.desc(), Transaction.created_at.desc())
-    txs = q.limit(300).all()
+
+    total_count = q.order_by(None).count()
+    total_pages = max(1, (total_count + TRANSACTIONS_PER_PAGE - 1) // TRANSACTIONS_PER_PAGE)
+    try:
+        page = int(request.args.get("page", 1))
+    except ValueError:
+        page = 1
+    page = min(max(page, 1), total_pages)
+    txs = q.offset((page - 1) * TRANSACTIONS_PER_PAGE).limit(TRANSACTIONS_PER_PAGE).all()
 
     group_ids = {t.transfer_group_id for t in txs if t.is_transfer}
     counterparts = {}
@@ -139,6 +149,9 @@ def list_transactions():
         selected_account_id=account_id,
         selected_account=selected_account,
         can_add_here=can_add_here,
+        page=page,
+        total_pages=total_pages,
+        total_count=total_count,
     )
 
 

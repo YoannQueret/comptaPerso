@@ -7,6 +7,14 @@ Toutes les modifications notables apportées à ce projet sont documentées dans
 Le format s'inspire librement de [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/).
 Les versions sont suivies dans le fichier `VERSION` à la racine du dépôt.
 
+## [0.4.7] - 2026-09-13
+
+### Ajouté
+- Pagination sur la page des transactions (50 par page, avec une
+  navigation en bas du tableau), remplaçant une limite silencieuse de
+  300 lignes qui masquait sinon les transactions plus anciennes sans
+  aucun moyen d'y accéder.
+
 ## [0.4.6] - 2026-09-12
 
 ### Modifié

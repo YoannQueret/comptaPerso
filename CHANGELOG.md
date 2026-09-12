@@ -7,6 +7,13 @@ All notable changes to this project are documented in this file.
 The format loosely follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 Versions are tracked in the `VERSION` file at the repo root.
 
+## [0.4.7] - 2026-09-13
+
+### Added
+- Pagination on the transactions page (50 per page, with page navigation
+  at the bottom of the table), replacing a silent 300-row cutoff that
+  otherwise hid older transactions with no way to reach them.
+
 ## [0.4.6] - 2026-09-12
 
 ### Changed

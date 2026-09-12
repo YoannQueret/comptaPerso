@@ -181,6 +181,9 @@ form.inline { display: inline; }
 .month-nav { display: flex; align-items: center; gap: 1rem; margin-bottom: 1rem; }
 .month-nav a { text-decoration: none; color: var(--primary); font-weight: 600; }
 
+.pagination { display: flex; align-items: center; justify-content: center; gap: 1rem; margin-top: 1rem; }
+.pagination a { text-decoration: none; color: var(--primary); font-weight: 600; }
+
 .due-row { background: #fffbeb; }
 .stat-value { font-size: 1.4rem; font-weight: 700; }
 
