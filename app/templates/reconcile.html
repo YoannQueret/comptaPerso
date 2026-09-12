@@ -20,11 +20,11 @@
   </p>
 </div>
 
-{% set date_mismatches = matches|selectattr('date_diff')|list %}
+{% set anomalies = matches|selectattr('anomaly')|list %}
 
 <div class="card">
-  <h2>{{ _("reconcile_date_mismatches") }}</h2>
-  {% for m in date_mismatches %}
+  <h2>{{ _("reconcile_anomalies") }}</h2>
+  {% for m in anomalies %}
   <form method="post" action="{{ url_for('transactions.reconcile', account_id=account.id) }}" id="sync-form-{{ m.index }}">
     <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
     <input type="hidden" name="ofx_content" value="{{ ofx_content }}">
@@ -32,21 +32,31 @@
     <input type="hidden" name="ofx_index" value="{{ m.index }}">
     <input type="hidden" name="tx_id" value="{{ m.tx.id }}">
   </form>
+  <form method="post" action="{{ url_for('transactions.reconcile', account_id=account.id) }}" id="flip-form-{{ m.tx.id }}">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+    <input type="hidden" name="ofx_content" value="{{ ofx_content }}">
+    <input type="hidden" name="action" value="flip_sign">
+    <input type="hidden" name="tx_id" value="{{ m.tx.id }}">
+  </form>
   {% endfor %}
   <div class="table-wrap">
   <table class="table-responsive">
-    <thead><tr><th>{{ _("ofx_date") }}</th><th>{{ _("recorded_date") }}</th><th>{{ _("amount") }}</th><th>{{ _("description") }}</th><th></th></tr></thead>
+    <thead><tr><th>{{ _("ofx_date") }}</th><th>{{ _("recorded_date") }}</th><th>{{ _("ofx_amount") }}</th><th>{{ _("recorded_amount") }}</th><th>{{ _("description") }}</th><th></th></tr></thead>
     <tbody>
-      {% for m in date_mismatches %}
+      {% for m in anomalies %}
       <tr>
         <td data-label="{{ _('ofx_date') }}">{{ m.row.date.strftime('%d/%m/%Y') }}</td>
         <td data-label="{{ _('recorded_date') }}">{{ m.tx.date.strftime('%d/%m/%Y') }}</td>
-        <td data-label="{{ _('amount') }}" class="{{ 'amount-positive' if m.row.amount >= 0 else 'amount-negative' }}">{{ "%.2f"|format(m.row.amount) }}</td>
+        <td data-label="{{ _('ofx_amount') }}" class="{{ 'amount-positive' if m.row.amount >= 0 else 'amount-negative' }}">{{ "%.2f"|format(m.row.amount) }}</td>
+        <td data-label="{{ _('recorded_amount') }}" class="{{ 'amount-positive' if m.tx.amount >= 0 else 'amount-negative' }}">{{ "%.2f"|format(m.tx.amount) }}</td>
         <td data-label="{{ _('description') }}">{{ m.tx.description or m.row.description or '—' }}</td>
-        <td><button form="sync-form-{{ m.index }}" class="btn btn-sm" type="submit">{{ _("reconcile_sync_date") }}</button></td>
+        <td>
+          {% if m.date_diff %}<button form="sync-form-{{ m.index }}" class="btn btn-sm" type="submit">{{ _("reconcile_sync_date") }}</button>{% endif %}
+          {% if m.inverted %}<button form="flip-form-{{ m.tx.id }}" class="btn btn-sm" type="submit">{{ _("reconcile_flip_sign") }}</button>{% endif %}
+        </td>
       </tr>
       {% else %}
-      <tr><td colspan="5">{{ _("reconcile_no_mismatches") }}</td></tr>
+      <tr><td colspan="6">{{ _("reconcile_no_anomalies") }}</td></tr>
       {% endfor %}
     </tbody>
   </table>

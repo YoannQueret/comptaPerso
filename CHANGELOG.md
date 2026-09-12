@@ -5,6 +5,21 @@ All notable changes to this project are documented in this file.
 The format loosely follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 Versions are tracked in the `VERSION` file at the repo root.
 
+## [0.4.5] - 2026-09-12
+
+### Fixed
+- Bank reconciliation: a downloaded OFX file usually only covers a recent
+  period, not the account's full history. The comparison now uses the
+  bank's own declared statement period (its `DTSTART`/`DTEND`) to decide
+  which recorded transactions are safe to flag as "extra" (delete
+  candidates), instead of guessing from the transactions actually present
+  in the file — a transaction outside that period is no longer wrongly
+  proposed for deletion.
+- Bank reconciliation now also recognizes a matching operation recorded
+  with the opposite sign (income/expense inverted) instead of listing it
+  as both missing and extra, and lets you fix it with a new "flip the
+  sign" action next to the existing date-sync one.
+
 ## [0.4.4] - 2026-09-12
 
 ### Added

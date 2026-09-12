@@ -373,6 +373,13 @@ def _apply_reconcile_action(action, form, acc, ofx_rows):
             db.session.commit()
             flash(g._("reconcile_date_updated"), "success")
 
+    elif action == "flip_sign":
+        tx = Transaction.query.filter_by(id=form.get("tx_id"), account_id=acc.id).first()
+        if tx:
+            tx.amount = -tx.amount
+            db.session.commit()
+            flash(g._("reconcile_sign_flipped"), "success")
+
 
 @bp.route("/reconcile", methods=["GET", "POST"])
 @login_required
@@ -382,6 +389,7 @@ def reconcile():
 
     error = None
     ofx_rows = None
+    period_start = period_end = None
     ofx_content_b64 = request.form.get("ofx_content")
 
     if request.method == "POST":
@@ -395,7 +403,10 @@ def reconcile():
 
         if raw is not None:
             try:
-                ofx_rows = parse_ofx_bytes(raw)
+                parsed = parse_ofx_bytes(raw)
+                ofx_rows = parsed["rows"]
+                period_start = parsed["start_date"]
+                period_end = parsed["end_date"]
             except ValueError:
                 error = g._("ofx_parse_error")
                 ofx_content_b64 = None
@@ -406,22 +417,46 @@ def reconcile():
 
     matches, missing, extra = [], [], []
     if ofx_rows is not None:
-        if ofx_rows:
-            min_date = min(r["date"] for r in ofx_rows) - timedelta(days=RECONCILE_DATE_TOLERANCE_DAYS)
-            max_date = max(r["date"] for r in ofx_rows) + timedelta(days=RECONCILE_DATE_TOLERANCE_DAYS)
+        # The bank's own declared statement period is the only period it
+        # actually vouches for — it typically doesn't cover the account's
+        # full history. Fall back to the transactions' own min/max only when
+        # the file doesn't declare one (some banks omit DTSTART/DTEND).
+        if not (period_start and period_end) and ofx_rows:
+            period_start = min(r["date"] for r in ofx_rows)
+            period_end = max(r["date"] for r in ofx_rows)
+
+        if period_start and period_end:
+            fetch_start = period_start - timedelta(days=RECONCILE_DATE_TOLERANCE_DAYS)
+            fetch_end = period_end + timedelta(days=RECONCILE_DATE_TOLERANCE_DAYS)
             db_txs = Transaction.query.filter(
                 Transaction.account_id == acc.id,
-                Transaction.date >= min_date,
-                Transaction.date <= max_date,
+                Transaction.date >= fetch_start,
+                Transaction.date <= fetch_end,
             ).all()
         else:
             db_txs = []
-        raw_matches, missing_idx, extra = match_ofx_transactions(ofx_rows, db_txs)
+
+        raw_matches, missing_idx, extra_candidates = match_ofx_transactions(ofx_rows, db_txs)
         matches = [
-            {"index": i, "row": ofx_rows[i], "tx": tx, "date_diff": diff}
-            for i, tx, diff in raw_matches
+            {
+                "index": i,
+                "row": ofx_rows[i],
+                "tx": tx,
+                "date_diff": diff,
+                "inverted": inverted,
+                "anomaly": bool(diff) or inverted,
+            }
+            for i, tx, diff, inverted in raw_matches
         ]
         missing = [{"index": i, "row": ofx_rows[i]} for i in missing_idx]
+        # A DB transaction outside the bank's declared period is never flagged
+        # as "extra": the file simply doesn't cover that period, so we can't
+        # tell whether it's really missing from the bank's side or just out
+        # of scope for this statement.
+        if period_start and period_end:
+            extra = [tx for tx in extra_candidates if period_start <= tx.date <= period_end]
+        else:
+            extra = extra_candidates
 
     return render_template(
         "reconcile.html",
