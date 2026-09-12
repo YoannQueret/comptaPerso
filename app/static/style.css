@@ -181,8 +181,24 @@ form.inline { display: inline; }
 .month-nav { display: flex; align-items: center; gap: 1rem; margin-bottom: 1rem; }
 .month-nav a { text-decoration: none; color: var(--primary); font-weight: 600; }
 
-.pagination { display: flex; align-items: center; justify-content: center; gap: 1rem; margin-top: 1rem; }
-.pagination a { text-decoration: none; color: var(--primary); font-weight: 600; }
+.pagination { display: flex; justify-content: center; margin-top: 1rem; }
+.page-list { display: flex; flex-wrap: wrap; list-style: none; margin: 0; padding: 0; gap: 0.25rem; }
+.page-link {
+  display: inline-block;
+  min-width: 2.2rem;
+  padding: 0.4rem 0.7rem;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  text-align: center;
+  text-decoration: none;
+  color: var(--primary);
+  font-weight: 600;
+  font-size: 0.9rem;
+  background: var(--card-bg);
+}
+.page-item a.page-link:hover { background: var(--bg); }
+.page-item.active .page-link { background: var(--primary); border-color: var(--primary); color: #fff; }
+.page-item.disabled .page-link { color: var(--muted); cursor: default; }
 
 .due-row { background: #fffbeb; }
 .stat-value { font-size: 1.4rem; font-weight: 700; }

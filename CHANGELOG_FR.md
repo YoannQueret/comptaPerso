@@ -7,6 +7,15 @@ Toutes les modifications notables apportées à ce projet sont documentées dans
 Le format s'inspire librement de [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/).
 Les versions sont suivies dans le fichier `VERSION` à la racine du dépôt.
 
+## [0.4.8] - 2026-09-13
+
+### Modifié
+- La pagination de la page des transactions est désormais une vraie
+  pagination façon Bootstrap : raccourcis vers la première/dernière page
+  en plus du précédent/suivant, ainsi que des liens directs vers les
+  numéros de page (avec des « … » pour les pages éloignées), au lieu
+  d'une simple paire précédent/suivant.
+
 ## [0.4.7] - 2026-09-13
 
 ### Ajouté

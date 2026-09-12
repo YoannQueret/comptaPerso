@@ -112,18 +112,32 @@
   </table>
   </div>
   {% if total_pages > 1 %}
-  <div class="pagination">
-    {% set qs = request.args.to_dict() %}
-    {% if page > 1 %}
-    {% set discard = qs.update({'page': page - 1}) %}
-    <a href="{{ url_for('transactions.list_transactions', **qs) }}">&larr; {{ _("previous") }}</a>
-    {% endif %}
-    <span class="muted">{{ _("page_of") % {"page": page, "total": total_pages} }}</span>
-    {% if page < total_pages %}
-    {% set discard = qs.update({'page': page + 1}) %}
-    <a href="{{ url_for('transactions.list_transactions', **qs) }}">{{ _("next") }} &rarr;</a>
-    {% endif %}
-  </div>
+  {% macro page_href(target_page) %}{% set qs = request.args.to_dict() %}{% set discard = qs.update({'page': target_page}) %}{{ url_for('transactions.list_transactions', **qs) }}{% endmacro %}
+  <nav class="pagination" aria-label="{{ _('pagination') }}">
+    <ul class="page-list">
+      <li class="page-item {{ 'disabled' if page == 1 else '' }}">
+        {% if page == 1 %}<span class="page-link">&laquo;</span>{% else %}<a class="page-link" href="{{ page_href(1) }}" aria-label="{{ _('first') }}">&laquo;</a>{% endif %}
+      </li>
+      <li class="page-item {{ 'disabled' if page == 1 else '' }}">
+        {% if page == 1 %}<span class="page-link">&lsaquo;</span>{% else %}<a class="page-link" href="{{ page_href(page - 1) }}" aria-label="{{ _('previous') }}">&lsaquo;</a>{% endif %}
+      </li>
+      {% for p in pagination_pages %}
+        {% if p is none %}
+        <li class="page-item disabled"><span class="page-link">&hellip;</span></li>
+        {% elif p == page %}
+        <li class="page-item active"><span class="page-link">{{ p }}</span></li>
+        {% else %}
+        <li class="page-item"><a class="page-link" href="{{ page_href(p) }}">{{ p }}</a></li>
+        {% endif %}
+      {% endfor %}
+      <li class="page-item {{ 'disabled' if page == total_pages else '' }}">
+        {% if page == total_pages %}<span class="page-link">&rsaquo;</span>{% else %}<a class="page-link" href="{{ page_href(page + 1) }}" aria-label="{{ _('next') }}">&rsaquo;</a>{% endif %}
+      </li>
+      <li class="page-item {{ 'disabled' if page == total_pages else '' }}">
+        {% if page == total_pages %}<span class="page-link">&raquo;</span>{% else %}<a class="page-link" href="{{ page_href(total_pages) }}" aria-label="{{ _('last') }}">&raquo;</a>{% endif %}
+      </li>
+    </ul>
+  </nav>
   {% endif %}
 </div>
 

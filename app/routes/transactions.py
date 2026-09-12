@@ -29,6 +29,25 @@ bp = Blueprint("transactions", __name__, url_prefix="/transactions")
 TRANSACTIONS_PER_PAGE = 50
 
 
+def _pagination_pages(page, total_pages, window=2):
+    """Bootstrap-style page list for a pager: first and last page always
+    shown, plus a `window`-sized range around the current page; `None`
+    marks a collapsed gap (rendered as "…")."""
+    pages = {1, total_pages}
+    for p in range(page - window, page + window + 1):
+        if 1 <= p <= total_pages:
+            pages.add(p)
+    ordered = sorted(pages)
+    result = []
+    prev = None
+    for p in ordered:
+        if prev is not None and p - prev > 1:
+            result.append(None)
+        result.append(p)
+        prev = p
+    return result
+
+
 def _parse_date(s, default=None):
     if not s:
         return default
@@ -152,6 +171,7 @@ def list_transactions():
         page=page,
         total_pages=total_pages,
         total_count=total_count,
+        pagination_pages=_pagination_pages(page, total_pages),
     )
 
 

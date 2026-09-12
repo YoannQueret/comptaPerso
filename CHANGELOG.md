@@ -7,6 +7,14 @@ All notable changes to this project are documented in this file.
 The format loosely follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 Versions are tracked in the `VERSION` file at the repo root.
 
+## [0.4.8] - 2026-09-13
+
+### Changed
+- The transactions page's pagination is now a proper Bootstrap-style
+  pager: first/last page shortcuts alongside previous/next, plus direct
+  page-number links (with "…" collapsing distant pages), instead of a
+  plain previous/next pair.
+
 ## [0.4.7] - 2026-09-13
 
 ### Added
