@@ -72,6 +72,15 @@
     <input type="hidden" name="action" value="add">
     <input type="hidden" name="ofx_index" value="{{ item.index }}">
   </form>
+  {% if item.recurring_rule %}
+  <form method="post" action="{{ url_for('transactions.reconcile', account_id=account.id) }}" id="validate-recurring-form-{{ item.index }}">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+    <input type="hidden" name="ofx_content" value="{{ ofx_content }}">
+    <input type="hidden" name="action" value="validate_recurring">
+    <input type="hidden" name="ofx_index" value="{{ item.index }}">
+    <input type="hidden" name="rule_id" value="{{ item.recurring_rule.id }}">
+  </form>
+  {% endif %}
   {% endfor %}
   <div class="table-wrap">
   <table class="table-responsive">
@@ -81,16 +90,31 @@
       <tr>
         <td data-label="{{ _('date') }}">{{ item.row.date.strftime('%d/%m/%Y') }}</td>
         <td data-label="{{ _('amount') }}" class="{{ 'amount-positive' if item.row.amount >= 0 else 'amount-negative' }}">{{ "%.2f"|format(item.row.amount) }}</td>
-        <td data-label="{{ _('description') }}">{{ item.row.description or '—' }}</td>
+        <td data-label="{{ _('description') }}">
+          {% if item.recurring_rule %}
+          {{ item.recurring_rule.label }} <span class="muted">({{ item.row.description or '—' }})</span>
+          {% else %}
+          {{ item.row.description or '—' }}
+          {% endif %}
+        </td>
         <td data-label="{{ _('category') }}">
+          {% if item.recurring_rule %}
+          <span class="muted">{{ item.recurring_rule.category.full_name if item.recurring_rule.category else '—' }}</span>
+          {% else %}
           <select form="add-form-{{ item.index }}" name="category_id">
             <option value="">—</option>
             {% for cat in categories %}
             <option value="{{ cat.id }}">{{ cat.full_name }}</option>
             {% endfor %}
           </select>
+          {% endif %}
         </td>
-        <td><button form="add-form-{{ item.index }}" class="btn btn-sm" type="submit">{{ _("reconcile_add") }}</button></td>
+        <td>
+          {% if item.recurring_rule %}
+          <button form="validate-recurring-form-{{ item.index }}" class="btn btn-sm" type="submit" title="{{ item.recurring_rule.label }}">{{ _("reconcile_validate_recurring") }}</button>
+          {% endif %}
+          <button form="add-form-{{ item.index }}" class="btn btn-sm btn-secondary" type="submit">{{ _("reconcile_add") }}</button>
+        </td>
       </tr>
       {% else %}
       <tr><td colspan="5">{{ _("reconcile_no_missing") }}</td></tr>

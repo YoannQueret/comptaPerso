@@ -543,6 +543,31 @@ def monthly_budget_chart_data(year, month):
     }
 
 
+def validate_occurrence_now(rule, occ_date, amount, budget_month=None):
+    """Core of validating one non-transfer recurring occurrence: record the
+    linked Transaction and advance `next_due_date`. Shared by the monthly
+    budget page's own validate action and OFX reconciliation — the latter
+    already has a real, bank-confirmed date/amount, so it skips the manual
+    adjustment step this route's form normally provides."""
+    if budget_month is None:
+        budget_month = occ_date.replace(day=1)
+    tx = Transaction(
+        user_id=rule.account.user_id,
+        account_id=rule.account_id,
+        category_id=rule.category_id,
+        date=occ_date,
+        budget_month=budget_month,
+        amount=amount,
+        description=rule.label,
+        recurring_rule_id=rule.id,
+    )
+    db.session.add(tx)
+    rule.next_due_date = advance_date(rule.next_due_date, rule.periodicity, rule.interval)
+    if rule.end_date and rule.next_due_date > rule.end_date:
+        rule.active = False
+    return tx
+
+
 @bp.route("/budget/validate/<rule_id>", methods=["POST"])
 @login_required
 def validate_occurrence(rule_id):
@@ -601,23 +626,12 @@ def validate_occurrence(rule_id):
             transfer_group_id=group_id,
             recurring_rule_id=rule.id,
         ))
+        rule.next_due_date = advance_date(rule.next_due_date, rule.periodicity, rule.interval)
+        if rule.end_date and rule.next_due_date > rule.end_date:
+            rule.active = False
     else:
         amount = -abs(amount) if rule.amount < 0 else abs(amount)
-        db.session.add(Transaction(
-            user_id=rule.account.user_id,
-            account_id=rule.account_id,
-            category_id=rule.category_id,
-            date=occ_date,
-            budget_month=budget_month,
-            amount=amount,
-            description=rule.label,
-            recurring_rule_id=rule.id,
-        ))
-
-    # advance to the next due date
-    rule.next_due_date = advance_date(rule.next_due_date, rule.periodicity, rule.interval)
-    if rule.end_date and rule.next_due_date > rule.end_date:
-        rule.active = False
+        validate_occurrence_now(rule, occ_date, amount, budget_month)
 
     db.session.commit()
     flash(g._("occurrence_validated"), "success")

@@ -7,6 +7,16 @@ All notable changes to this project are documented in this file.
 The format loosely follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 Versions are tracked in the `VERSION` file at the repo root.
 
+## [0.4.9] - 2026-09-26
+
+### Added
+- Bank reconciliation now checks a missing operation against your active
+  recurring rules before offering to add it as a plain one-off transaction.
+  A match (same sign, amount within an approximate tolerance, date close to
+  the rule's own due date) can be validated directly as that occurrence —
+  shown with the rule's own label next to the bank's raw wording, e.g.
+  "Plaisir D'Asie (X3264 ANH GEX 24/09)" instead of just the latter.
+
 ## [0.4.8] - 2026-09-13
 
 ### Changed

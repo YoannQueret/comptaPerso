@@ -180,14 +180,6 @@ si les devises diffèrent, saisissez séparément le montant envoyé et le monta
 (pour refléter le taux de change réel / les frais). Si c'est la même devise, le
 montant reçu est recopié automatiquement (modifiable si besoin).
 
-## Ce qui est volontairement simplifié dans cette v1
-
-- Pas d'import CSV/OFX bancaire (peut être ajouté si utile).
-- Pas de conversion vers une « devise de référence » unique (les soldes/rapports
-  restent par compte/devise ; pas de conversion multi-devises agrégée pour
-  l'instant).
-- Pas encore de graphiques (les rapports sont sous forme de tableaux).
-
 ## Structure du projet
 
 ```

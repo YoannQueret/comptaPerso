@@ -88,3 +88,41 @@ def match_ofx_transactions(ofx_rows, db_txs, tolerance_days=RECONCILE_DATE_TOLER
     missing = [i for i in range(len(ofx_rows)) if i not in matched_ofx]
     extra = [tx for tx in db_txs if tx.id not in matched_db]
     return matches, missing, extra
+
+
+def match_recurring_candidates(missing_rows, rules, tolerance_days=RECONCILE_DATE_TOLERANCE_DAYS):
+    """For each still-unmatched OFX row, look for a plausible recurring rule
+    it might actually be — so it can be validated as that occurrence instead
+    of added as a bare one-off transaction (and displayed with the rule's
+    own label, e.g. "Plaisir D'Asie", next to the bank's cryptic one).
+
+    A rule's stored amount is only an approximation (a subscription price
+    can change, a utility bill is an estimate) — matched here on the same
+    sign within a wide tolerance rather than requiring equality — combined
+    with the OFX date falling near the rule's own `next_due_date`. Greedy
+    bipartite, like `match_ofx_transactions`: a rule matches at most one row.
+
+    `missing_rows` is a list of (ofx_index, row) tuples. Returns
+    {ofx_index: RecurringRule}.
+    """
+    candidates = []
+    for index, row in missing_rows:
+        for rule in rules:
+            if (row["amount"] < 0) != (rule.amount < 0):
+                continue
+            amount_tolerance = max(Decimal("5"), abs(rule.amount) * Decimal("0.2"))
+            if abs(row["amount"] - rule.amount) > amount_tolerance:
+                continue
+            diff = abs((row["date"] - rule.next_due_date).days)
+            if diff <= tolerance_days:
+                candidates.append((diff, index, rule))
+    candidates.sort(key=lambda c: c[0])
+
+    matched = {}
+    used_rules = set()
+    for _, index, rule in candidates:
+        if index in matched or rule.id in used_rules:
+            continue
+        matched[index] = rule
+        used_rules.add(rule.id)
+    return matched

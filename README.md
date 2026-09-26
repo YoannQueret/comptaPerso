@@ -173,13 +173,6 @@ currencies differ, enter the amount sent and the amount received separately
 (to reflect the real exchange rate / fees). If it's the same currency, the
 amount received is copied automatically (editable if needed).
 
-## What's intentionally simplified in this v1
-
-- No CSV/OFX bank import (can be added if useful).
-- No single "reference currency" conversion (balances/reports stay per
-  account/currency; no aggregated multi-currency conversion for now).
-- No charts yet (reports are table-based).
-
 ## Project structure
 
 ```

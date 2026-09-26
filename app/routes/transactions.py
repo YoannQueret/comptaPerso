@@ -10,8 +10,14 @@ from flask import (
 from flask_login import login_required, current_user
 
 from app.extensions import db
-from app.models import Transaction, Account, Category
-from app.ofx_reconcile import parse_ofx_bytes, match_ofx_transactions, RECONCILE_DATE_TOLERANCE_DAYS
+from app.models import Transaction, Account, Category, RecurringRule
+from app.ofx_reconcile import (
+    parse_ofx_bytes,
+    match_ofx_transactions,
+    match_recurring_candidates,
+    RECONCILE_DATE_TOLERANCE_DAYS,
+)
+from app.routes.recurring import validate_occurrence_now
 from app.utils import (
     resolve_account_id,
     ordered_categories,
@@ -413,6 +419,20 @@ def _apply_reconcile_action(action, form, acc, ofx_rows):
             db.session.commit()
             flash(g._("reconcile_sign_flipped"), "success")
 
+    elif action == "validate_recurring":
+        try:
+            index = int(form.get("ofx_index", ""))
+            row = ofx_rows[index]
+        except (ValueError, IndexError):
+            return
+        rule = RecurringRule.query.filter_by(
+            id=form.get("rule_id"), account_id=acc.id, is_transfer=False
+        ).first()
+        if rule:
+            validate_occurrence_now(rule, row["date"], row["amount"])
+            db.session.commit()
+            flash(g._("occurrence_validated"), "success")
+
 
 @bp.route("/reconcile", methods=["GET", "POST"])
 @login_required
@@ -490,6 +510,22 @@ def reconcile():
             extra = [tx for tx in extra_candidates if period_start <= tx.date <= period_end]
         else:
             extra = extra_candidates
+
+        # A "missing" row might actually be a known recurring expense/income
+        # that just hasn't been validated yet (e.g. the bank shows a cryptic
+        # "X3264 ANH GEX 24/09" for what comptaPerso already knows as a
+        # monthly "Plaisir D'Asie" debit) — offer to validate it as that
+        # occurrence instead of adding a disconnected one-off transaction.
+        recurring_rules = RecurringRule.query.filter(
+            RecurringRule.account_id == acc.id,
+            RecurringRule.is_transfer.is_(False),
+            RecurringRule.active.is_(True),
+        ).all()
+        recurring_by_index = match_recurring_candidates(
+            [(item["index"], item["row"]) for item in missing], recurring_rules
+        )
+        for item in missing:
+            item["recurring_rule"] = recurring_by_index.get(item["index"])
 
     return render_template(
         "reconcile.html",

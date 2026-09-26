@@ -7,6 +7,18 @@ Toutes les modifications notables apportées à ce projet sont documentées dans
 Le format s'inspire librement de [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/).
 Les versions sont suivies dans le fichier `VERSION` à la racine du dépôt.
 
+## [0.4.9] - 2026-09-26
+
+### Ajouté
+- Le rapprochement bancaire vérifie désormais si une opération manquante
+  correspond à l'une de vos règles récurrentes actives avant de proposer
+  de l'ajouter comme une simple transaction isolée. Une correspondance
+  (même signe, montant dans une tolérance approximative, date proche de
+  l'échéance de la règle) peut être validée directement comme cette
+  occurrence — affichée avec le libellé de la règle à côté du texte brut
+  de la banque, par exemple « Plaisir D'Asie (X3264 ANH GEX 24/09) »
+  plutôt que ce dernier seul.
+
 ## [0.4.8] - 2026-09-13
 
 ### Modifié
