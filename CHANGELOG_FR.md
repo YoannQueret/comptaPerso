@@ -7,6 +7,16 @@ Toutes les modifications notables apportées à ce projet sont documentées dans
 Le format s'inspire librement de [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/).
 Les versions sont suivies dans le fichier `VERSION` à la racine du dépôt.
 
+## [0.4.10] - 2026-10-02
+
+### Modifié
+- Sur la page budget mensuel, le « solde net (avec report) » affiche
+  désormais en priorité le solde hors opérations à venir, avec le solde
+  les incluant affiché en plus petit juste en dessous (uniquement quand
+  ils diffèrent).
+- Le tableau « autres transactions du mois » signale désormais les lignes
+  à venir avec le même badge « À venir » que la page des transactions.
+
 ## [0.4.9] - 2026-09-26
 
 ### Ajouté

@@ -7,6 +7,15 @@ All notable changes to this project are documented in this file.
 The format loosely follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 Versions are tracked in the `VERSION` file at the repo root.
 
+## [0.4.10] - 2026-10-02
+
+### Changed
+- The monthly budget page's "net balance (with carryover)" now shows the
+  balance excluding future-dated operations as the main figure, with the
+  balance including them shown smaller just below (only when they differ).
+- The "other transactions this month" table now flags future-dated rows
+  with the same "Upcoming" badge used on the transactions page.
+
 ## [0.4.9] - 2026-09-26
 
 ### Added

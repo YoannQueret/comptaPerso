@@ -289,10 +289,13 @@ def delete_recurring(rule_id):
     return redirect(url_for("recurring.list_recurring"))
 
 
-def _carryover_balance(account_id, start):
+def _carryover_balance(account_id, start, as_of_date=None):
     """Budget balance just before `start`: initial balance + all transactions whose
     budget_month is before this one (not `date` — a budget-shifted transaction must
-    be counted exactly once, either in the carryover or in the month's own total)."""
+    be counted exactly once, either in the carryover or in the month's own total).
+    `as_of_date`, when given, additionally excludes transactions dated after it —
+    used to report a balance that ignores not-yet-happened (future-dated)
+    operations, regardless of which budget month they were attributed to."""
     ids = accessible_account_ids(current_user)
     carryover_q = db.session.query(
         db.func.coalesce(db.func.sum(Transaction.amount), 0)
@@ -300,6 +303,8 @@ def _carryover_balance(account_id, start):
         Transaction.account_id.in_(ids),
         Transaction.budget_month < start,
     )
+    if as_of_date is not None:
+        carryover_q = carryover_q.filter(Transaction.date <= as_of_date)
     initial_balance_q = db.session.query(
         db.func.coalesce(db.func.sum(Account.initial_balance), 0)
     ).filter(Account.id.in_(ids))
@@ -370,8 +375,14 @@ def monthly_budget(year, month):
                     (leg for leg in by_group.get(t.transfer_group_id, []) if leg.id != t.id), None
                 )
 
+    today = today_for_user(current_user)
+
     total_expenses = sum(-float(t.amount) for t in validated_txs + other_txs if t.amount < 0)
     total_income = sum(float(t.amount) for t in validated_txs + other_txs if t.amount > 0)
+
+    past_txs = [t for t in validated_txs + other_txs if t.date <= today]
+    total_expenses_past = sum(-float(t.amount) for t in past_txs if t.amount < 0)
+    total_income_past = sum(float(t.amount) for t in past_txs if t.amount > 0)
 
     pending_amounts = [_rule_pending_amount(r, account_id) for r in due_rules]
     pending_expenses = sum(-a for a in pending_amounts if a < 0)
@@ -382,6 +393,12 @@ def monthly_budget(year, month):
 
     carryover = _carryover_balance(account_id, start)
     net_with_carryover = carryover + remaining_validated
+    # Same figure, but excluding not-yet-happened (future-dated) operations —
+    # what the account actually holds today, not what it will once every
+    # already-recorded-but-future operation clears.
+    net_with_carryover_no_future = (
+        _carryover_balance(account_id, start, as_of_date=today) + total_income_past - total_expenses_past
+    )
 
     prev_month = start.replace(day=1) - timedelta(days=1)
     next_month_date = end + timedelta(days=1)
@@ -417,9 +434,10 @@ def monthly_budget(year, month):
         active_accounts=active_accounts,
         categories=categories,
         categories_by_owner=categories_by_owner_map,
-        today=today_for_user(current_user),
+        today=today,
         carryover=carryover,
         net_with_carryover=net_with_carryover,
+        net_with_carryover_no_future=net_with_carryover_no_future,
         prev_year=prev_month.year,
         prev_month=prev_month.month,
         next_year=next_month_date.year,
