@@ -1,12 +1,15 @@
 // Shows a discreet running total of the amounts whose row is ticked in the
 // second, non-persisted checkbox column (transactions / monthly budget
 // tables) — purely client-side, since that column itself resets on every
-// reload. Positioned to start right above that column's own "S" header.
+// reload. Positioned to start right above that column's own "S" header,
+// with a small "clear" button to untick everything at once.
 document.addEventListener('DOMContentLoaded', function () {
   document.querySelectorAll('[data-check2-counter]').forEach(function (counterEl) {
     var table = document.getElementById(counterEl.getAttribute('data-check2-counter'));
     if (!table) return;
     var template = counterEl.getAttribute('data-template') || '{total}';
+    var textEl = counterEl.querySelector('.check2-total-text');
+    var resetBtn = counterEl.querySelector('.check2-reset');
 
     function updateTotal() {
       var total = 0;
@@ -20,9 +23,10 @@ document.addEventListener('DOMContentLoaded', function () {
           currency = currency || cb.getAttribute('data-currency') || '';
         }
       });
-      counterEl.textContent = any
+      textEl.textContent = any
         ? template.replace('{total}', total.toFixed(2) + (currency ? ' ' + currency : ''))
         : '';
+      if (resetBtn) resetBtn.hidden = !any;
     }
 
     function updatePosition() {
@@ -38,6 +42,12 @@ document.addEventListener('DOMContentLoaded', function () {
     table.addEventListener('change', function (e) {
       if (e.target.classList.contains('check2')) updateTotal();
     });
+    if (resetBtn) {
+      resetBtn.addEventListener('click', function () {
+        table.querySelectorAll('.check2:checked').forEach(function (cb) { cb.checked = false; });
+        updateTotal();
+      });
+    }
     window.addEventListener('resize', updatePosition);
     updateTotal();
     updatePosition();

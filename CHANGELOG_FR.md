@@ -7,6 +7,13 @@ Toutes les modifications notables apportées à ce projet sont documentées dans
 Le format s'inspire librement de [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/).
 Les versions sont suivies dans le fichier `VERSION` à la racine du dépôt.
 
+## [0.4.13] - 2026-10-12
+
+### Ajouté
+- Un petit bouton « tout désélectionner » à côté du total de la colonne
+  Sélection (page transactions / tableaux du budget mensuel), affiché dès
+  qu'au moins une ligne est cochée, pour toutes les décocher d'un coup.
+
 ## [0.4.12] - 2026-10-12
 
 ### Ajouté

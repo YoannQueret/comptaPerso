@@ -7,6 +7,13 @@ All notable changes to this project are documented in this file.
 The format loosely follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 Versions are tracked in the `VERSION` file at the repo root.
 
+## [0.4.13] - 2026-10-12
+
+### Added
+- A small "clear" button next to the selection column's running total
+  (transactions / monthly budget tables), shown as soon as at least one
+  row is ticked, to untick them all at once.
+
 ## [0.4.12] - 2026-10-12
 
 ### Added

@@ -106,7 +106,10 @@
 <div class="card">
   <h2>{{ _("validated_this_month") }}</h2>
   <div class="check2-total-wrap">
-  <span class="check2-total muted" data-check2-counter="validated-txs-table" data-template="{{ _('checked_count_label') }}"></span>
+  <span class="check2-total muted" data-check2-counter="validated-txs-table" data-template="{{ _('checked_count_label') }}">
+    <span class="check2-total-text"></span>
+    <button type="button" class="check2-reset" title="{{ _('clear_selection') }}" hidden>✕</button>
+  </span>
   <div class="table-wrap">
   <table id="validated-txs-table" class="table-aligned table-responsive">
     <thead><tr><th class="col-date">{{ _("date") }}</th><th class="col-description">{{ _("description") }}</th><th class="col-check" title="{{ _('reviewed_column_label') }}">{{ _("reviewed_column_short") }}</th><th class="col-check" title="{{ _('check2_column_label') }}">{{ _("check2_column_short") }}</th><th>{{ _("amount") }}</th><th></th></tr></thead>
@@ -159,7 +162,10 @@
     {% endif %}
   </div>
   <div class="check2-total-wrap">
-  <span class="check2-total muted" data-check2-counter="other-txs-table" data-template="{{ _('checked_count_label') }}"></span>
+  <span class="check2-total muted" data-check2-counter="other-txs-table" data-template="{{ _('checked_count_label') }}">
+    <span class="check2-total-text"></span>
+    <button type="button" class="check2-reset" title="{{ _('clear_selection') }}" hidden>✕</button>
+  </span>
   <div class="table-wrap">
   <table id="other-txs-table" class="table-aligned table-responsive">
     <thead><tr><th class="col-date">{{ _("date") }}</th><th class="col-description">{{ _("description") }}</th><th class="col-check" title="{{ _('reviewed_column_label') }}">{{ _("reviewed_column_short") }}</th><th class="col-check" title="{{ _('check2_column_label') }}">{{ _("check2_column_short") }}</th><th>{{ _("amount") }}</th><th>{{ _("category") }}</th><th></th></tr></thead>

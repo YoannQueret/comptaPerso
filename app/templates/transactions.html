@@ -56,7 +56,10 @@
     <input type="search" class="table-search" data-table="transactions-table" data-empty-label="{{ _('no_search_results') }}" placeholder="{{ _('search_placeholder') }}">
   </div>
   <div class="check2-total-wrap">
-  <span class="check2-total muted" data-check2-counter="transactions-table" data-template="{{ _('checked_count_label') }}"></span>
+  <span class="check2-total muted" data-check2-counter="transactions-table" data-template="{{ _('checked_count_label') }}">
+    <span class="check2-total-text"></span>
+    <button type="button" class="check2-reset" title="{{ _('clear_selection') }}" hidden>✕</button>
+  </span>
   <div class="table-wrap">
   <table id="transactions-table" class="table-responsive">
     <thead>

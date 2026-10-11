@@ -126,7 +126,17 @@ h2 { font-size: 1.2rem; }
 
 .table-wrap { overflow-x: auto; }
 .check2-total-wrap { position: relative; padding-top: 1.3rem; }
-.check2-total { position: absolute; top: 0; left: 0; font-size: 0.8rem; white-space: nowrap; }
+.check2-total { position: absolute; top: 0; left: 0; font-size: 0.8rem; white-space: nowrap; display: flex; align-items: center; gap: 0.35rem; }
+.check2-reset {
+  border: none;
+  background: none;
+  color: var(--muted);
+  cursor: pointer;
+  font-size: 0.85rem;
+  line-height: 1;
+  padding: 0;
+}
+.check2-reset:hover { color: var(--danger); }
 table { width: 100%; border-collapse: collapse; }
 th, td { text-align: left; padding: 0.5rem 0.6rem; border-bottom: 1px solid var(--border); font-size: 0.92rem; }
 
