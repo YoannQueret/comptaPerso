@@ -55,6 +55,8 @@
     <label>{{ _("search") }}</label>
     <input type="search" class="table-search" data-table="transactions-table" data-empty-label="{{ _('no_search_results') }}" placeholder="{{ _('search_placeholder') }}">
   </div>
+  <div class="check2-total-wrap">
+  <span class="check2-total muted" data-check2-counter="transactions-table" data-template="{{ _('checked_count_label') }}"></span>
   <div class="table-wrap">
   <table id="transactions-table" class="table-responsive">
     <thead>
@@ -66,7 +68,7 @@
             {{ _("date") }} {{ '↓' if sort == 'date_desc' else '↑' }}
           </a>
         </th>
-        <th>{{ _("category") }}</th><th>{{ _("description") }}</th><th class="col-check"></th><th class="col-check"></th><th>{{ _("amount") }}</th><th></th>
+        <th>{{ _("category") }}</th><th>{{ _("description") }}</th><th class="col-check" title="{{ _('reviewed_column_label') }}">{{ _("reviewed_column_short") }}</th><th class="col-check" title="{{ _('check2_column_label') }}">{{ _("check2_column_short") }}</th><th>{{ _("amount") }}</th><th></th>
       </tr>
     </thead>
     <tbody>
@@ -85,7 +87,7 @@
         </td>
         <td data-label="{{ _('description') }}">{{ t.description or '—' }}</td>
         <td class="col-check"><input type="checkbox" {{ 'checked' if t.reviewed else '' }} data-toggle-url="{{ url_for('transactions.toggle_reviewed', tx_id=t.id) }}"></td>
-        <td class="col-check"><input type="checkbox"></td>
+        <td class="col-check"><input type="checkbox" class="check2" data-amount="{{ t.amount }}" data-currency="{{ t.account.currency }}"></td>
         <td data-label="{{ _('amount') }}" class="{{ 'amount-positive' if t.amount >= 0 else 'amount-negative' }}">{{ "%.2f"|format(t.amount) }} {{ t.account.currency }}</td>
         <td>
           <span class="attachment-slot">{%- if t.attachment_filename -%}<button type="button" class="attachment-btn" title="{{ _('view_attachment') }}" onclick="openAttachment('{{ url_for('transactions.view_attachment', tx_id=t.id) }}', '{{ t.attachment_filename.rsplit('.', 1)[-1] }}', '{{ _('open_in_new_tab') }}')">📎</button>{%- endif -%}</span>
@@ -110,6 +112,7 @@
       {% endfor %}
     </tbody>
   </table>
+  </div>
   </div>
   {% if total_pages > 1 %}
   {% macro page_href(target_page) %}{% set qs = request.args.to_dict() %}{% set discard = qs.update({'page': target_page}) %}{{ url_for('transactions.list_transactions', **qs) }}{% endmacro %}

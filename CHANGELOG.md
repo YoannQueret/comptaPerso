@@ -7,6 +7,18 @@ All notable changes to this project are documented in this file.
 The format loosely follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 Versions are tracked in the `VERSION` file at the repo root.
 
+## [0.4.12] - 2026-10-12
+
+### Added
+- Validating a recurring occurrence with an amount that differs from the
+  rule's usual one now offers to update the rule's default amount for
+  future occurrences, instead of only affecting this one.
+- The two checkbox columns (transactions page, monthly budget tables) now
+  have single-letter headers — "P" for the persisted "Pointage" tick and
+  "S" for the per-visit "Selection" one, each showing the full word on
+  hover — plus a discreet running total of the amounts ticked in the
+  selection column, positioned right above its header.
+
 ## [0.4.11] - 2026-10-11
 
 ### Added

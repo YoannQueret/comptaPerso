@@ -647,12 +647,20 @@ def validate_occurrence(rule_id):
         rule.next_due_date = advance_date(rule.next_due_date, rule.periodicity, rule.interval)
         if rule.end_date and rule.next_due_date > rule.end_date:
             rule.active = False
+        if request.form.get("update_rule_amount") == "1":
+            rule.amount = -amount_sent
+            rule.amount_received = amount_received
     else:
         amount = -abs(amount) if rule.amount < 0 else abs(amount)
         validate_occurrence_now(rule, occ_date, amount, budget_month)
+        if request.form.get("update_rule_amount") == "1":
+            rule.amount = amount
 
     db.session.commit()
-    flash(g._("occurrence_validated"), "success")
+    if request.form.get("update_rule_amount") == "1":
+        flash(g._("occurrence_validated_amount_updated"), "success")
+    else:
+        flash(g._("occurrence_validated"), "success")
 
     redirect_year = request.form.get("year", type=int) or occ_date.year
     redirect_month = request.form.get("month", type=int) or occ_date.month

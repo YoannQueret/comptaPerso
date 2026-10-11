@@ -105,9 +105,11 @@
 
 <div class="card">
   <h2>{{ _("validated_this_month") }}</h2>
+  <div class="check2-total-wrap">
+  <span class="check2-total muted" data-check2-counter="validated-txs-table" data-template="{{ _('checked_count_label') }}"></span>
   <div class="table-wrap">
-  <table class="table-aligned table-responsive">
-    <thead><tr><th class="col-date">{{ _("date") }}</th><th class="col-description">{{ _("description") }}</th><th class="col-check"></th><th class="col-check"></th><th>{{ _("amount") }}</th><th></th></tr></thead>
+  <table id="validated-txs-table" class="table-aligned table-responsive">
+    <thead><tr><th class="col-date">{{ _("date") }}</th><th class="col-description">{{ _("description") }}</th><th class="col-check" title="{{ _('reviewed_column_label') }}">{{ _("reviewed_column_short") }}</th><th class="col-check" title="{{ _('check2_column_label') }}">{{ _("check2_column_short") }}</th><th>{{ _("amount") }}</th><th></th></tr></thead>
     <tbody>
       {% for t in validated_txs %}
       <tr>
@@ -120,7 +122,7 @@
           {% endif %}
         </td>
         <td class="col-check"><input type="checkbox" {{ 'checked' if t.reviewed else '' }} data-toggle-url="{{ url_for('transactions.toggle_reviewed', tx_id=t.id) }}"></td>
-        <td class="col-check"><input type="checkbox"></td>
+        <td class="col-check"><input type="checkbox" class="check2" data-amount="{{ t.amount }}" data-currency="{{ t.account.currency }}"></td>
         <td data-label="{{ _('amount') }}" class="{{ 'amount-positive' if t.amount >= 0 else 'amount-negative' }}">{{ "%.2f"|format(t.amount) }} {{ t.account.currency }}</td>
         <td>
           {% if t.is_transfer %}
@@ -143,6 +145,7 @@
     </tbody>
   </table>
   </div>
+  </div>
 </div>
 
 <div class="card">
@@ -155,16 +158,18 @@
     </div>
     {% endif %}
   </div>
+  <div class="check2-total-wrap">
+  <span class="check2-total muted" data-check2-counter="other-txs-table" data-template="{{ _('checked_count_label') }}"></span>
   <div class="table-wrap">
-  <table class="table-aligned table-responsive">
-    <thead><tr><th class="col-date">{{ _("date") }}</th><th class="col-description">{{ _("description") }}</th><th class="col-check"></th><th class="col-check"></th><th>{{ _("amount") }}</th><th>{{ _("category") }}</th><th></th></tr></thead>
+  <table id="other-txs-table" class="table-aligned table-responsive">
+    <thead><tr><th class="col-date">{{ _("date") }}</th><th class="col-description">{{ _("description") }}</th><th class="col-check" title="{{ _('reviewed_column_label') }}">{{ _("reviewed_column_short") }}</th><th class="col-check" title="{{ _('check2_column_label') }}">{{ _("check2_column_short") }}</th><th>{{ _("amount") }}</th><th>{{ _("category") }}</th><th></th></tr></thead>
     <tbody>
       {% for t in other_txs %}
       <tr class="{{ 'future-tx' if t.date > today else '' }}">
         <td data-label="{{ _('date') }}">{{ t.date.strftime('%d/%m/%Y') }}{% if t.date > today %} <span class="badge-future">{{ _("future") }}</span>{% endif %}{% if t.budget_month != t.date.replace(day=1) %} <span class="muted" title="{{ _('budget_month') }}">→ {{ month_name(locale, t.budget_month.month) }} {{ t.budget_month.year }}</span>{% endif %}</td>
         <td data-label="{{ _('description') }}">{{ t.description or '—' }}</td>
         <td class="col-check"><input type="checkbox" {{ 'checked' if t.reviewed else '' }} data-toggle-url="{{ url_for('transactions.toggle_reviewed', tx_id=t.id) }}"></td>
-        <td class="col-check"><input type="checkbox"></td>
+        <td class="col-check"><input type="checkbox" class="check2" data-amount="{{ t.amount }}" data-currency="{{ t.account.currency }}"></td>
         <td data-label="{{ _('amount') }}" class="{{ 'amount-positive' if t.amount >= 0 else 'amount-negative' }}">{{ "%.2f"|format(t.amount) }} {{ t.account.currency }}</td>
         <td data-label="{{ _('category') }}">
           {% if t.is_transfer %}
@@ -190,6 +195,7 @@
       {% endfor %}
     </tbody>
   </table>
+  </div>
   </div>
 </div>
 
@@ -325,6 +331,27 @@ document.getElementById('from_account_id').addEventListener('change', function()
 document.getElementById('to_account_id').addEventListener('change', function() { updateTransferLabels(true); });
 document.getElementById('amount_sent').addEventListener('input', function() { updateTransferLabels(true); });
 updateTransferLabels(false);
+</script>
+
+<script>
+(function() {
+  var confirmMsg = {{ _("confirm_update_rule_amount")|tojson }};
+  document.querySelectorAll('form[id^="form-"]').forEach(function(form) {
+    form.addEventListener('submit', function() {
+      var amountInput = document.querySelector('[form="' + form.id + '"][name="amount"]');
+      if (!amountInput) return;
+      var typed = parseFloat((amountInput.value || '').replace(',', '.'));
+      var original = parseFloat((amountInput.defaultValue || '').replace(',', '.'));
+      if (isNaN(typed) || isNaN(original) || Math.abs(typed - original) < 0.005) return;
+      var msg = confirmMsg.replace('{old}', original.toFixed(2)).replace('{new}', typed.toFixed(2));
+      var updateField = document.createElement('input');
+      updateField.type = 'hidden';
+      updateField.name = 'update_rule_amount';
+      updateField.value = confirm(msg) ? '1' : '0';
+      form.appendChild(updateField);
+    });
+  });
+})();
 </script>
 
 {% if year > now.year or (year == now.year and month >= now.month) %}

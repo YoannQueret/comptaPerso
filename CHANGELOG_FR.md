@@ -7,6 +7,20 @@ Toutes les modifications notables apportées à ce projet sont documentées dans
 Le format s'inspire librement de [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/).
 Les versions sont suivies dans le fichier `VERSION` à la racine du dépôt.
 
+## [0.4.12] - 2026-10-12
+
+### Ajouté
+- Valider une occurrence récurrente avec un montant différent du montant
+  habituel de la règle propose désormais de mettre à jour le montant par
+  défaut de la règle pour les prochaines échéances, au lieu de ne modifier
+  que cette occurrence.
+- Les deux colonnes à cocher (page transactions, tableaux du budget
+  mensuel) ont désormais des en-têtes d'une seule lettre — « P » pour la
+  coche persistée « Pointage » et « S » pour celle « Sélection » (par
+  visite), chacune affichant le mot complet au survol — ainsi qu'un total
+  discret des montants cochés dans la colonne Sélection, positionné
+  juste au-dessus de son en-tête.
+
 ## [0.4.11] - 2026-10-11
 
 ### Ajouté
