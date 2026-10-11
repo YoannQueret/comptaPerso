@@ -379,6 +379,8 @@ def _apply_reconcile_action(action, form, acc, ofx_rows):
             row = ofx_rows[index]
         except (ValueError, IndexError):
             return
+        description = form.get("description")
+        description = description.strip() if description else row["description"]
         tx = Transaction(
             user_id=acc.user_id,
             account_id=acc.id,
@@ -386,7 +388,7 @@ def _apply_reconcile_action(action, form, acc, ofx_rows):
             date=row["date"],
             budget_month=row["date"].replace(day=1),
             amount=row["amount"],
-            description=row["description"],
+            description=description,
         )
         db.session.add(tx)
         db.session.commit()

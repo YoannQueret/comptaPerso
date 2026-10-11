@@ -7,6 +7,14 @@ Toutes les modifications notables apportées à ce projet sont documentées dans
 Le format s'inspire librement de [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/).
 Les versions sont suivies dans le fichier `VERSION` à la racine du dépôt.
 
+## [0.4.11] - 2026-10-11
+
+### Ajouté
+- Rapprochement bancaire : la description d'une opération manquante peut
+  désormais être modifiée avant son ajout, pré-remplie avec le libellé de
+  la règle récurrente détectée le cas échéant, ou le texte brut de la
+  banque sinon.
+
 ## [0.4.10] - 2026-10-02
 
 ### Modifié

@@ -91,10 +91,10 @@
         <td data-label="{{ _('date') }}">{{ item.row.date.strftime('%d/%m/%Y') }}</td>
         <td data-label="{{ _('amount') }}" class="{{ 'amount-positive' if item.row.amount >= 0 else 'amount-negative' }}">{{ "%.2f"|format(item.row.amount) }}</td>
         <td data-label="{{ _('description') }}">
+          <input type="text" form="add-form-{{ item.index }}" name="description" style="min-width:160px;"
+                 value="{{ item.recurring_rule.label if item.recurring_rule else (item.row.description or '') }}">
           {% if item.recurring_rule %}
-          {{ item.recurring_rule.label }} <span class="muted">({{ item.row.description or '—' }})</span>
-          {% else %}
-          {{ item.row.description or '—' }}
+          <div class="muted" style="font-size:0.8rem;">{{ item.row.description or '—' }}</div>
           {% endif %}
         </td>
         <td data-label="{{ _('category') }}">

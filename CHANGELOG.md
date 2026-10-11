@@ -7,6 +7,13 @@ All notable changes to this project are documented in this file.
 The format loosely follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 Versions are tracked in the `VERSION` file at the repo root.
 
+## [0.4.11] - 2026-10-11
+
+### Added
+- Bank reconciliation: the description of a missing operation can now be
+  edited before adding it, pre-filled with the matching recurring rule's
+  label when one was detected, or the bank's raw wording otherwise.
+
 ## [0.4.10] - 2026-10-02
 
 ### Changed
