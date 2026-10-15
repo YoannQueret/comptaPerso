@@ -388,14 +388,15 @@ def monthly_budget(year, month):
     pending_expenses = sum(-a for a in pending_amounts if a < 0)
     pending_income = sum(a for a in pending_amounts if a > 0)
 
-    remaining_validated = total_income - total_expenses
     remaining_forecast = (total_income + pending_income) - (total_expenses + pending_expenses)
 
     carryover = _carryover_balance(account_id, start)
-    net_with_carryover = carryover + remaining_validated
-    # Same figure, but excluding not-yet-happened (future-dated) operations —
-    # what the account actually holds today, not what it will once every
-    # already-recorded-but-future operation clears.
+    # Includes not-yet-validated recurring occurrences (due_rules), same as
+    # remaining_forecast, so this figure and the forecast card stay consistent.
+    net_with_carryover = carryover + remaining_forecast
+    # Same figure, but excluding not-yet-happened (future-dated) operations
+    # AND not-yet-validated recurring items — what the account actually holds
+    # today, not what it will once every pending/future operation clears.
     net_with_carryover_no_future = (
         _carryover_balance(account_id, start, as_of_date=today) + total_income_past - total_expenses_past
     )
