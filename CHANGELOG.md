@@ -7,6 +7,15 @@ All notable changes to this project are documented in this file.
 The format loosely follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 Versions are tracked in the `VERSION` file at the repo root.
 
+## [0.4.14] - 2026-10-15
+
+### Fixed
+- The monthly budget page's "net balance (with carryover)" secondary
+  figure (including future operations) now also accounts for
+  not-yet-validated recurring items, not just already-recorded
+  transactions — consistent with the "remaining to live on (forecast)"
+  card, which already included them.
+
 ## [0.4.13] - 2026-10-12
 
 ### Added

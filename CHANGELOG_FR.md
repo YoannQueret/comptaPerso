@@ -7,6 +7,15 @@ Toutes les modifications notables apportées à ce projet sont documentées dans
 Le format s'inspire librement de [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/).
 Les versions sont suivies dans le fichier `VERSION` à la racine du dépôt.
 
+## [0.4.14] - 2026-10-15
+
+### Corrigé
+- Le montant secondaire « avec report » (incluant les opérations à venir)
+  de la page budget mensuel prend désormais aussi en compte les
+  récurrences pas encore validées, pas uniquement les transactions déjà
+  enregistrées — cohérent avec la carte « reste à vivre (prévisionnel) »
+  qui les incluait déjà.
+
 ## [0.4.13] - 2026-10-12
 
 ### Ajouté
