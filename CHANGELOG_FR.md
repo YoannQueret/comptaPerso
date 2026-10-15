@@ -7,6 +7,13 @@ Toutes les modifications notables apportées à ce projet sont documentées dans
 Le format s'inspire librement de [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/).
 Les versions sont suivies dans le fichier `VERSION` à la racine du dépôt.
 
+## [0.4.15] - 2026-10-15
+
+### Ajouté
+- Le tableau de bord met désormais en évidence la carte de votre compte
+  par défaut avec un fond qui lui est propre, en plus de celui déjà
+  existant pour les comptes partagés.
+
 ## [0.4.14] - 2026-10-15
 
 ### Corrigé

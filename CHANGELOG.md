@@ -7,6 +7,12 @@ All notable changes to this project are documented in this file.
 The format loosely follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 Versions are tracked in the `VERSION` file at the repo root.
 
+## [0.4.15] - 2026-10-15
+
+### Added
+- The dashboard now highlights your default account's card with its own
+  distinct background, alongside the existing one for shared accounts.
+
 ## [0.4.14] - 2026-10-15
 
 ### Fixed

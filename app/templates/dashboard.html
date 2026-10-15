@@ -4,7 +4,7 @@
 
 <div class="card-grid">
   {% for acc in accounts %}
-  <div class="card{{ ' card-shared' if acc.user_id != current_user.id else '' }}">
+  <div class="card{{ ' card-shared' if acc.user_id != current_user.id else '' }}{{ ' card-default' if acc.id == current_user.default_account_id else '' }}">
     <div class="muted"><a href="{{ url_for('transactions.list_transactions', account_id=acc.id) }}">{{ acc.name }}</a></div>
     {% if acc.account_type %}<div class="muted" style="font-size:0.8rem;">{{ acc.account_type.name }}</div>{% endif %}
     <div class="stat-value {{ 'amount-positive' if acc.current_balance >= 0 else 'amount-negative' }}">
